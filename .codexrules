@@ -1,0 +1,123 @@
+# X → 小红书：Codex 项目规则
+
+本文件是新会话进入本仓库时唯一的规则入口。不要默认全仓扫描；先按下面的读取顺序获取任务所需信息。
+
+## 首次读取顺序
+
+1. 本文件。
+2. `memory-bank/activeContext.md`：当前状态、已知问题和下一步。
+3. 根据任务只读取相关专题：
+   - 产品范围与用户流程：`memory-bank/productContext.md`
+   - 技术栈与运行方式：`memory-bank/techContext.md`
+   - 架构、数据流与模块职责：`memory-bank/systemPatterns.md`
+   - 已完成能力与历史节点：`memory-bank/progress.md`
+4. 涉及生成内容规范时，必须直接读取
+   `Long-form-post-prompt.md`。它是内容合同的最高权威，memory-bank
+   只做摘要。
+
+禁止为了“恢复上下文”无差别通读整个仓库或全部 memory-bank；按任务渐进读取。
+
+## 项目定位
+
+这是一个本地运行的 X-to-Xiaohongshu 转换器：
+
+- 输入：完整 X 帖子文本，或一条 `x.com` / `twitter.com` 帖子 URL。
+- 输出：小红书平台「写长文」笔记。
+- 不做：视频、普通图文笔记、播客或自动发布。
+- Markdown 只用于模型输出、内部拆分和确定性校验；复制到小红书时输出清理后的纯文本。
+
+## 不可破坏的产品约束
+
+- 默认使用中文界面和中文回复。
+- 页面只有三个核心工作区：`01 粘贴 X 内容`、`02 小红书长文`、`03 规范检查`。
+- 三个工作区保持同一可用高度；整页禁止上下或横向滚动，内容只能在各面板内部滚动。
+- `02` 不能提供“一次复制全文”作为主流程，必须按小红书「写长文」的 7 步流程分段处理：
+  1. 长文标题
+  2. 长文正文
+  3. 一键排版
+  4. 发布标题
+  5. 正文描述
+  6. 标签
+  7. 检查并发布
+- `03` 必须保持父子分组，并区分：
+  - 11 项可自动判定条件。
+  - 8 项发布前人工内容复核。
+- 人工复核项不得计入自动失败数量，也不得触发自动重写。
+- 模型顺序固定：Gemini → Groq Qwen → OpenRouter Free。
+- API Key 只能存在本地服务端 `.env`：
+  - 不写入 React 源码。
+  - 不写入浏览器存储。
+  - 健康检查和设置接口不得返回 Key。
+  - 配置页密码框不得回显已保存 Key。
+- 不要把用户密钥、提示词中的输入正文或模型完整响应写入日志、测试快照、文档或提交信息。
+
+## 权威与同步规则
+
+| 主题 | 权威来源 | 修改时必须同步 |
+|---|---|---|
+| 长文内容规范 | `Long-form-post-prompt.md` | `src/validation.js`、相关测试、memory-bank 摘要 |
+| 供应商顺序与默认模型 | `providers.mjs` | 设置页、README、测试 |
+| 发布分段流程 | `src/PublishWorkflow.jsx`、`src/xiaohongshuPublish.js` | 对应测试、产品上下文 |
+| 自动检查与人工复核 | `src/validation.js` | `src/App.jsx`、测试、产品上下文 |
+| 修复策略 | `src/repairStrategy.js`、`server.mjs` | `src/RepairControls.jsx`、修复测试、activeContext |
+| API 设置安全 | `server.mjs`、`src/ApiSettingsDialog.jsx` | `.env.example`、安全测试、techContext |
+
+## 常用命令
+
+要求 Node.js 20.18 或更高版本。
+
+```bash
+npm install
+npm run dev
+npm run check
+```
+
+- 开发前端：`http://localhost:5173`
+- 本地 API：`http://localhost:8787`
+- 生产模式：先 `npm run build`，再 `npm start`
+
+## 修改与验证要求
+
+1. 修改前确认工作区状态，不覆盖用户已有改动。
+2. 只做任务范围内的变更，不顺手重构无关模块。
+3. 所有代码修改至少运行：
+
+   ```bash
+   npm run check
+   git diff --check
+   ```
+
+4. 涉及界面时还要用浏览器验证：
+   - 页面身份和非空渲染。
+   - 控制台无相关 error/warn。
+   - 目标交互确实改变状态。
+   - 桌面端和当前移动端尺寸。
+   - `documentElement.scrollHeight === innerHeight`，确保整页不滚动。
+5. 涉及 API Key 时，额外验证：
+   - `.env` 仍被 Git 忽略。
+   - 文件权限保持 `600`。
+   - `/api/health` 不包含 `apiKey`、`secret` 或 `token` 字段。
+6. 完成重要功能后更新：
+   - `memory-bank/activeContext.md`
+   - `memory-bank/progress.md`
+   - 若架构或技术发生变化，再更新对应专题文件。
+
+## 快速模块地图
+
+| 文件 | 职责 |
+|---|---|
+| `src/App.jsx` | 三栏主界面、生成/修复状态、健康状态、设置入口 |
+| `src/ApiSettingsDialog.jsx` | 右上角 API Key 与模型配置弹窗 |
+| `src/PublishWorkflow.jsx` | 小红书 7 步发布与分段复制 |
+| `src/validation.js` | Markdown 解析、计数、自动检查和人工检查分组 |
+| `src/repairStrategy.js` | repair / revise / regenerate 策略选择 |
+| `src/xiaohongshuPublish.js` | 把 Markdown 拆成标题、正文、描述、标签 |
+| `src/xiaohongshuText.js` | 清理 Markdown 为可粘贴纯文本 |
+| `providers.mjs` | 三家模型适配、错误归一化和自动降级 |
+| `server.mjs` | 本地 HTTP API、X URL 解析、提示词组装、设置持久化 |
+| `scripts/dev.mjs` | 同时启动 Node API 与 Vite |
+| `tests/` | Node 原生测试，覆盖供应商、设置、修复、验证和文本拆分 |
+
+## 当前需要注意
+
+修复链路能够把失败项、当前值、目标要求、通过项和原草稿提交给模型，但复合检查的失败原因仍不够细；单个 `structure` 失败目前可能直接触发整篇重生。处理相关任务前先读 `memory-bank/activeContext.md`。
