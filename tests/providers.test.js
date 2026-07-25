@@ -13,7 +13,7 @@ function jsonResponse(body, status = 200) {
   });
 }
 
-test("服务状态保持 Gemini、Groq Qwen、OpenRouter Free 的固定顺序", () => {
+test("服务状态保持五家模型的固定降级顺序", () => {
   const providers = getProviderStatus({
     GEMINI_API_KEY: "gemini-key",
     GROQ_MODEL: "custom-qwen",
@@ -24,6 +24,12 @@ test("服务状态保持 Gemini、Groq Qwen、OpenRouter Free 的固定顺序", 
     [
       { id: "gemini", model: "gemini-3.5-flash", configured: true },
       { id: "groq", model: "custom-qwen", configured: false },
+      { id: "zhipu", model: "glm-4.7-flash", configured: false },
+      {
+        id: "siliconflow",
+        model: "Qwen/Qwen3.5-4B",
+        configured: false,
+      },
       { id: "openrouter", model: "openrouter/free", configured: false },
     ],
   );
@@ -47,6 +53,8 @@ test("Gemini 成功时不调用后备服务", async () => {
     env: {
       GEMINI_API_KEY: "gemini-key",
       GROQ_API_KEY: "groq-key",
+      ZHIPU_API_KEY: "zhipu-key",
+      SILICONFLOW_API_KEY: "siliconflow-key",
       OPENROUTER_API_KEY: "openrouter-key",
     },
     fetchImpl: async (url, options) => {
@@ -72,6 +80,8 @@ test("Gemini 限流后自动切换到 Groq Qwen", async () => {
     env: {
       GEMINI_API_KEY: "gemini-key",
       GROQ_API_KEY: "groq-key",
+      ZHIPU_API_KEY: "zhipu-key",
+      SILICONFLOW_API_KEY: "siliconflow-key",
       OPENROUTER_API_KEY: "openrouter-key",
     },
     fetchImpl: async (url) => {
@@ -105,6 +115,8 @@ test("第二次修复可跳过上一次成功的模型", async () => {
     env: {
       GEMINI_API_KEY: "gemini-key",
       GROQ_API_KEY: "groq-key",
+      ZHIPU_API_KEY: "zhipu-key",
+      SILICONFLOW_API_KEY: "siliconflow-key",
       OPENROUTER_API_KEY: "openrouter-key",
     },
     skipProviders: ["gemini"],
@@ -128,18 +140,75 @@ test("第二次修复可跳过上一次成功的模型", async () => {
   );
 });
 
-test("前两家失败后由 OpenRouter Free 兜底并返回实际模型", async () => {
+test("Gemini 和 Groq 失败后由智谱 GLM 接续", async () => {
   let callCount = 0;
   const result = await generateWithFallback({
     prompt: "完整提示词",
     env: {
       GEMINI_API_KEY: "gemini-key",
       GROQ_API_KEY: "groq-key",
+      ZHIPU_API_KEY: "zhipu-key",
+    },
+    fetchImpl: async (url) => {
+      callCount += 1;
+      if (callCount < 3) {
+        return jsonResponse({ error: { message: "temporary error" } }, 503);
+      }
+      assert.match(url, /open\.bigmodel\.cn/);
+      return jsonResponse({
+        model: "glm-4.7-flash",
+        choices: [{ message: { content: "# 智谱草稿" } }],
+      });
+    },
+  });
+
+  assert.equal(result.provider, "zhipu");
+  assert.equal(result.model, "glm-4.7-flash");
+  assert.equal(result.draft, "# 智谱草稿");
+  assert.equal(callCount, 3);
+});
+
+test("智谱失败后由硅基流动 Qwen 接续", async () => {
+  let callCount = 0;
+  const result = await generateWithFallback({
+    prompt: "完整提示词",
+    env: {
+      ZHIPU_API_KEY: "zhipu-key",
+      SILICONFLOW_API_KEY: "siliconflow-key",
+    },
+    fetchImpl: async (url) => {
+      callCount += 1;
+      if (callCount === 1) {
+        return jsonResponse({ error: { message: "temporary error" } }, 503);
+      }
+      assert.match(url, /api\.siliconflow\.cn/);
+      return jsonResponse({
+        model: "Qwen/Qwen3.5-4B",
+        choices: [{ message: { content: "# 硅基流动草稿" } }],
+      });
+    },
+  });
+
+  assert.equal(result.provider, "siliconflow");
+  assert.equal(result.model, "Qwen/Qwen3.5-4B");
+  assert.equal(result.draft, "# 硅基流动草稿");
+  assert.equal(callCount, 2);
+});
+
+test("前四家失败后由 OpenRouter Free 兜底并返回实际模型", async () => {
+  let callCount = 0;
+  const result = await generateWithFallback({
+    prompt: "完整提示词",
+    env: {
+      GEMINI_API_KEY: "gemini-key",
+      GROQ_API_KEY: "groq-key",
+      ZHIPU_API_KEY: "zhipu-key",
+      SILICONFLOW_API_KEY: "siliconflow-key",
       OPENROUTER_API_KEY: "openrouter-key",
     },
     fetchImpl: async () => {
       callCount += 1;
-      if (callCount < 3) {
+      if (callCount < 5) {
         return jsonResponse({ error: { message: "temporary error" } }, 503);
       }
       return jsonResponse({
@@ -152,7 +221,7 @@ test("前两家失败后由 OpenRouter Free 兜底并返回实际模型", async 
   assert.equal(result.provider, "openrouter");
   assert.equal(result.model, "vendor/free-model");
   assert.equal(result.attempts.at(-1).status, "success");
-  assert.equal(callCount, 3);
+  assert.equal(callCount, 5);
 });
 
 test("未配置任何 API Key 时给出明确提示且不发请求", async () => {
@@ -167,7 +236,7 @@ test("未配置任何 API Key 时给出明确提示且不发请求", async () =>
         return jsonResponse({});
       },
     }),
-    /至少填写 GEMINI_API_KEY、GROQ_API_KEY 或 OPENROUTER_API_KEY/,
+    /至少填写以下一个变量：.*ZHIPU_API_KEY.*SILICONFLOW_API_KEY/,
   );
   assert.equal(called, false);
 });

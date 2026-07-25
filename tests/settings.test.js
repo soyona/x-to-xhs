@@ -66,3 +66,71 @@ test("可以替换或清除 Key，且拒绝占位符", () => {
     /仍是占位符/,
   );
 });
+
+test("可以保存智谱和硅基流动的 Key 与模型", () => {
+  const updates = buildSettingsUpdates({
+    providers: {
+      zhipu: {
+        apiKey: "zhipu-live-key",
+        clearKey: false,
+        model: "glm-4.7-flash",
+      },
+      siliconflow: {
+        apiKey: "siliconflow-live-key",
+        clearKey: false,
+        model: "Qwen/Qwen3.5-4B",
+      },
+    },
+  });
+
+  assert.equal(updates.ZHIPU_API_KEY, "zhipu-live-key");
+  assert.equal(updates.ZHIPU_MODEL, "glm-4.7-flash");
+  assert.equal(updates.SILICONFLOW_API_KEY, "siliconflow-live-key");
+  assert.equal(updates.SILICONFLOW_MODEL, "Qwen/Qwen3.5-4B");
+});
+
+test("新增默认模型的 API Key 时显式写入对应模型", () => {
+  const updates = buildSettingsUpdates(
+    {
+      providers: {
+        zhipu: {
+          apiKey: "zhipu-live-key",
+          clearKey: false,
+          model: "glm-4.7-flash",
+        },
+        gemini: {
+          apiKey: "",
+          clearKey: false,
+          model: "gemini-3.5-flash",
+        },
+      },
+    },
+    {},
+  );
+  const next = mergeEnvContent("", updates);
+
+  assert.match(next, /^ZHIPU_API_KEY=zhipu-live-key$/m);
+  assert.match(next, /^ZHIPU_MODEL=glm-4\.7-flash$/m);
+  assert.doesNotMatch(next, /^GEMINI_MODEL=/m);
+});
+
+test("已保存 Key 不回显时再次保存仍会补齐默认模型", () => {
+  const updates = buildSettingsUpdates(
+    {
+      providers: {
+        zhipu: {
+          apiKey: "",
+          clearKey: false,
+          model: "glm-4.7-flash",
+        },
+      },
+    },
+    {
+      ZHIPU_API_KEY: "existing-zhipu-key",
+    },
+  );
+
+  assert.deepEqual(updates, {
+    ZHIPU_MODEL: "glm-4.7-flash",
+  });
+});

@@ -6,6 +6,7 @@ import {
   normalizeContentPreferences,
 } from "./contentPreferences";
 import { AlertIcon, ArrowIcon } from "./icons";
+import { HistoryDialog } from "./HistoryDialog";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { PublishWorkflow } from "./PublishWorkflow";
 import { getRepairStrategy } from "./repairStrategy";
@@ -39,6 +40,15 @@ async function postJson(path, body) {
 const prototypeMode =
   import.meta.env.DEV &&
   new URLSearchParams(window.location.search).get("prototype") === "1";
+
+function getHistoryNotice(result) {
+  if (prototypeMode) return "";
+  if (result.historyWarning) return result.historyWarning;
+  if (!result.historyId) {
+    return "本地服务尚未加载历史功能，请重启 npm run dev；本次稿件尚未写入历史。";
+  }
+  return "";
+}
 
 function loadContentPreferences() {
   try {
@@ -75,6 +85,9 @@ export default function App() {
   const [draftHistory, setDraftHistory] = useState([]);
   const [repairScope, setRepairScope] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [activeHistory, setActiveHistory] = useState(null);
+  const [historyNotice, setHistoryNotice] = useState("");
   const [settingsTab, setSettingsTab] = useState("preferences");
   const [contentPreferences, setContentPreferences] = useState(
     loadContentPreferences,
@@ -108,6 +121,7 @@ export default function App() {
     setLastRepairProvider("");
     setDraftHistory([]);
     setRepairScope(null);
+    setHistoryNotice("");
     try {
       const result = prototypeMode
         ? await new Promise((resolve) => {
@@ -129,6 +143,12 @@ export default function App() {
           });
       setDraft(result.draft);
       setGeneration(result);
+      setActiveHistory(
+        result.historyId
+          ? { id: result.historyId, version: result.historyVersion }
+          : null,
+      );
+      setHistoryNotice(getHistoryNotice(result));
       setStatus("done");
     } catch (generationError) {
       setError(generationError.message);
@@ -208,6 +228,8 @@ export default function App() {
             passedChecks,
             mode: scopedStrategy.mode,
             preferences: contentPreferences,
+            historyId: activeHistory?.id,
+            historyVersion: activeHistory?.version,
             skipProvider:
               repairAttempts >= 1 && hasAlternativeProvider
                 ? lastRepairProvider
@@ -218,6 +240,13 @@ export default function App() {
       );
       setDraft(result.draft);
       setGeneration(result);
+      if (result.historyId) {
+        setActiveHistory({
+          id: result.historyId,
+          version: result.historyVersion,
+        });
+      }
+      setHistoryNotice(getHistoryNotice(result));
       setLastRepairProvider(result.provider);
       setRepairAttempts((attempts) => attempts + 1);
       setStatus("done");
@@ -239,6 +268,49 @@ export default function App() {
     setRepairScope(null);
   }
 
+  function loadHistory({ record, version }) {
+    const restoredPreferences = normalizeContentPreferences(record.preferences);
+    setInput(record.source?.content || "");
+    setDraft(version.draft);
+    setGeneration({
+      provider: version.provider,
+      providerLabel:
+        version.providerLabel || version.provider || "历史记录",
+      model: version.model || "模型未知",
+      attempts: [],
+    });
+    setActiveHistory({
+      id: record.id,
+      version: record.currentVersion,
+    });
+    setContentPreferences(restoredPreferences);
+    window.localStorage.setItem(
+      CONTENT_PREFERENCE_STORAGE_KEY,
+      JSON.stringify(restoredPreferences),
+    );
+    setRepairAttempts(0);
+    setLastRepairProvider("");
+    setDraftHistory([]);
+    setRepairScope(null);
+    setHistoryNotice(
+      version.version === record.currentVersion
+        ? "已载入历史笔记，未调用模型。"
+        : `已载入历史版本 ${version.version}，后续修复会创建新版本。`,
+    );
+    setError("");
+    setStatus("done");
+    setHistoryOpen(false);
+  }
+
+  function handleHistoryDeleted(id) {
+    if (activeHistory?.id === id) {
+      setActiveHistory(null);
+      setHistoryNotice(
+        "当前工作区内容仍然保留，但对应历史记录已删除；下次修复会创建新记录。",
+      );
+    }
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -258,6 +330,13 @@ export default function App() {
               : "本地运行 · 等待 API Key"}
             {prototypeMode && " · 交互稿"}
           </div>
+          <button
+            className="history-button"
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+          >
+            <span className="history-button-prefix">查看</span>历史
+          </button>
           <button
             className="settings-button"
             type="button"
@@ -307,6 +386,13 @@ export default function App() {
               </div>
             )}
 
+            {historyNotice && (
+              <div className="history-notice" role="status">
+                <AlertIcon />
+                <span>{historyNotice}</span>
+              </div>
+            )}
+
             <div className="provider-chain" aria-label="模型调用顺序">
               <strong>自动切换顺序</strong>
               <div>
@@ -324,7 +410,10 @@ export default function App() {
                     </span>
                   ))
                 ) : (
-                  <span>Gemini → Groq Qwen → OpenRouter Free</span>
+                  <span>
+                    Gemini → Groq Qwen → 智谱 GLM → 硅基流动 Qwen →
+                    OpenRouter Free
+                  </span>
                 )}
               </div>
               {generation?.attempts && (
@@ -394,7 +483,8 @@ export default function App() {
                   正在深度重构这条 X 帖子
                 </h2>
                 <p>
-                  正按 Gemini → Groq Qwen → OpenRouter Free 自动尝试，并生成完整长文。
+                  正按 Gemini → Groq Qwen → 智谱 GLM → 硅基流动 Qwen →
+                  OpenRouter Free 自动尝试，并生成完整长文。
                 </p>
               </div>
             ) : (
@@ -422,7 +512,7 @@ export default function App() {
         <span>
           {generation
             ? `服务：${generation.providerLabel} · 模型：${generation.model}`
-            : "默认：Gemini · 备用：Groq Qwen · 兜底：OpenRouter Free"}
+            : "默认：Gemini · 备用：Groq Qwen / 智谱 GLM / 硅基流动 Qwen · 兜底：OpenRouter Free"}
         </span>
         <span className="secure-note">API Key 仅保留在本地服务端</span>
       </footer>
@@ -435,6 +525,13 @@ export default function App() {
         onClose={() => setSettingsOpen(false)}
         onSave={saveSettings}
         onSavePreferences={saveContentPreferences}
+      />
+      <HistoryDialog
+        open={historyOpen}
+        activeHistoryId={activeHistory?.id}
+        onClose={() => setHistoryOpen(false)}
+        onLoad={loadHistory}
+        onDeleted={handleHistoryDeleted}
       />
     </div>
   );

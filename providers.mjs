@@ -15,6 +15,24 @@ export const PROVIDERS = [
     keyName: "GROQ_API_KEY",
     modelName: "GROQ_MODEL",
     defaultModel: "qwen/qwen3.6-27b",
+    url: "https://api.groq.com/openai/v1/chat/completions",
+    extraBody: { reasoning_format: "hidden" },
+  },
+  {
+    id: "zhipu",
+    label: "智谱 GLM",
+    keyName: "ZHIPU_API_KEY",
+    modelName: "ZHIPU_MODEL",
+    defaultModel: "glm-4.7-flash",
+    url: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+  },
+  {
+    id: "siliconflow",
+    label: "硅基流动 Qwen",
+    keyName: "SILICONFLOW_API_KEY",
+    modelName: "SILICONFLOW_MODEL",
+    defaultModel: "Qwen/Qwen3.5-4B",
+    url: "https://api.siliconflow.cn/v1/chat/completions",
   },
   {
     id: "openrouter",
@@ -22,6 +40,8 @@ export const PROVIDERS = [
     keyName: "OPENROUTER_API_KEY",
     modelName: "OPENROUTER_MODEL",
     defaultModel: "openrouter/free",
+    url: "https://openrouter.ai/api/v1/chat/completions",
+    extraHeaders: { "X-Title": "X to Xiaohongshu" },
   },
 ];
 
@@ -168,19 +188,13 @@ async function callChatCompletion({
 
 async function callProvider(provider, options) {
   if (provider.id === "gemini") return callGemini(options);
-  if (provider.id === "groq") {
-    return callChatCompletion({
-      ...options,
-      url: "https://api.groq.com/openai/v1/chat/completions",
-      label: provider.label,
-      extraBody: { reasoning_format: "hidden" },
-    });
-  }
+  if (!provider.url) throw new Error(`${provider.label} 缺少请求地址。`);
   return callChatCompletion({
     ...options,
-    url: "https://openrouter.ai/api/v1/chat/completions",
+    url: provider.url,
     label: provider.label,
-    extraHeaders: { "X-Title": "X to Xiaohongshu" },
+    extraBody: provider.extraBody,
+    extraHeaders: provider.extraHeaders,
   });
 }
 
@@ -256,8 +270,9 @@ export async function generateWithFallback({
 
   const configured = statuses.filter((provider) => provider.configured);
   if (!configured.length) {
+    const keyNames = PROVIDERS.map((provider) => provider.keyName).join("、");
     throw new Error(
-      "尚未配置任何模型。请在 .env 中至少填写 GEMINI_API_KEY、GROQ_API_KEY 或 OPENROUTER_API_KEY。",
+      `尚未配置任何模型。请在 .env 中至少填写以下一个变量：${keyNames}。`,
     );
   }
   throw new Error(

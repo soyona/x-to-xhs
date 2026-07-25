@@ -11,12 +11,13 @@ Long-form-post-prompt.md 注入原文
   ↑
 白名单创作偏好（浏览器本地保存，服务端清洗）
                              ↓
-Gemini → Groq Qwen → OpenRouter Free
+Gemini → Groq Qwen → 智谱 GLM → 硅基流动 Qwen → OpenRouter Free
                              ↓
 Markdown 草稿
   ├─ validateDraft → 自动检查 + 人工复核提示
   ├─ splitXiaohongshuDraft → 标题/正文/描述/标签
-  └─ repair / revise / regenerate → 新草稿 → 重新检查
+  ├─ repair / revise / regenerate → 新草稿 → 重新检查
+  └─ historyStore → history.json + history.json.bak
 ```
 
 ## 提示词模式
@@ -117,6 +118,19 @@ Markdown 草稿
 4. 新 Key 通过同源 POST 提交。
 5. 服务端合并 `.env`，保留无关变量。
 6. 写入后更新当前进程环境，使配置即时生效。
+
+## 历史持久化模式
+
+- `historyStore.mjs` 是 JSON 数据格式、排序、限额、版本和原子写入的唯一
+  权威。
+- 默认文件为 `.local-data/history.json`，备份为
+  `.local-data/history.json.bak`，两者权限均为 `600`。
+- 所有写入在进程内串行执行：读取 → 修改 → 写临时文件 → 验证 →
+  备份旧有效文件 → 原子重命名。
+- 一次首次生成创建一条记录；修复追加版本；每条只保留最近 3 个版本。
+- 最多 50 条顶层记录，达到上限时报错，不静默淘汰。
+- 历史列表只返回轻量元数据；详情接口才返回原始内容和完整草稿。
+- 载入历史由前端恢复工作区状态并重新执行现有确定性检查，不调用模型。
 
 ## UI 布局模式
 

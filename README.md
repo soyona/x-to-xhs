@@ -87,13 +87,25 @@ X 正文或单条帖子 URL
 - 严重残缺时重新生成完整草稿。
 - 最多支持两次自动处理，并可恢复上一版本。
 
+### 本地历史笔记
+
+- 每次首次生成成功后自动创建一条历史记录。
+- 修复结果作为同一笔记的新版本保存，不制造重复的顶层记录。
+- 默认按最近更新时间倒序，最近生成或修复的笔记排在最前。
+- 右上角「查看历史」支持查看版本、载入工作区和删除。
+- 最多保存 50 条笔记，每条保留最近 3 个版本。
+- 历史保存在本地服务端 `.local-data/history.json`，并维护
+  `history.json.bak` 备份。
+
 ### 多模型自动降级
 
 模型顺序固定为：
 
 1. Gemini
 2. Groq Qwen
-3. OpenRouter Free
+3. 智谱 GLM
+4. 硅基流动 Qwen
+5. OpenRouter Free
 
 服务端会跳过没有配置 API Key 的服务。遇到限流、额度耗尽、超时或调用错误时，会自动尝试下一家，并向界面返回不包含密钥的安全错误摘要。
 
@@ -109,6 +121,9 @@ npm run dev
 
 然后打开 [http://localhost:5173](http://localhost:5173)。
 
+开发模式会在本地服务代码变化时自动重启后端。首次更新到包含新接口的版本后，
+如果开发服务此前一直未关闭，请手动重启一次 `npm run dev`。
+
 如需在不调用模型的情况下体验内联检查、局部修复、通过状态和版本恢复，
 可在开发模式打开
 [http://localhost:5173/?prototype=1](http://localhost:5173/?prototype=1)。
@@ -123,16 +138,21 @@ npm run dev
 ```dotenv
 GEMINI_API_KEY=...
 GROQ_API_KEY=...
+ZHIPU_API_KEY=...
+SILICONFLOW_API_KEY=...
 OPENROUTER_API_KEY=...
 ```
 
-完整配置三家服务后，可以获得完整的自动降级链路。默认模型为：
+完整配置五家服务后，可以获得完整的自动降级链路。默认模型为：
 
 - Gemini：`gemini-3.5-flash`
 - Groq Qwen：`qwen/qwen3.6-27b`
+- 智谱 GLM：`glm-4.7-flash`
+- 硅基流动 Qwen：`Qwen/Qwen3.5-4B`
 - OpenRouter：`openrouter/free`
 
-可以通过 `GEMINI_MODEL`、`GROQ_MODEL` 和 `OPENROUTER_MODEL` 覆盖默认模型。本地服务也会读取常见的 `HTTPS_PROXY`、`HTTP_PROXY` 和 `ALL_PROXY` 代理环境变量。
+可以通过对应的 `*_MODEL` 环境变量覆盖默认模型。本地服务也会读取常见的
+`HTTPS_PROXY`、`HTTP_PROXY` 和 `ALL_PROXY` 代理环境变量。
 
 ## 使用流程
 
@@ -143,6 +163,9 @@ OPENROUTER_API_KEY=...
 
 创作偏好统一通过页面右上角唯一的「设置」入口修改。恢复默认只重置创作偏好，
 不会影响 API Key。
+
+右上角「查看历史」用于找回已生成的笔记。载入历史只恢复原始内容、草稿、模型
+信息和对应创作偏好，不会自动调用模型；后续修复会继续写入同一条记录。
 
 生成后请按小红书「写长文」的 7 个步骤操作：
 
@@ -168,6 +191,10 @@ OPENROUTER_API_KEY=...
 
 - API Key 只保存在本地服务端 `.env`。
 - 创作偏好保存在当前浏览器的本地存储，不包含 API Key。
+- 原始 X 内容、生成稿和最近 3 个版本保存在本地服务端
+  `.local-data/history.json`，文件权限为 `600`。
+- `.local-data/` 已被 Git 忽略；可通过 `X_TO_XHS_DATA_DIR` 改用其他
+  本地数据目录。
 - Key 不写入 React 源码或浏览器存储。
 - 健康检查和设置接口不会返回 Key。
 - 配置弹窗不会回显已保存的 Key。
@@ -176,7 +203,8 @@ OPENROUTER_API_KEY=...
 - 生成和修复时，原始素材、提示词、当前草稿及相关检查信息会发送给自动降级链路中实际尝试的第三方模型服务。
 - 不同模型服务及其上游供应商可能采用不同的数据保留和使用政策。请在配置前阅读相应条款，不要提交敏感、保密或不应向第三方披露的个人信息。
 
-请勿提交 `.env`。仓库只提供不含真实密钥的 [`.env.example`](./.env.example)。
+请勿提交 `.env` 或 `.local-data/`。仓库只提供不含真实密钥的
+[`.env.example`](./.env.example)。
 
 ## 生产运行
 

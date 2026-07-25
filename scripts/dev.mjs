@@ -4,7 +4,19 @@ const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const nodeCommand = process.execPath;
 
 const children = [
-  spawn(nodeCommand, ["server.mjs"], { stdio: "inherit" }),
+  spawn(
+    nodeCommand,
+    [
+      "--watch-preserve-output",
+      "--watch-path=server.mjs",
+      "--watch-path=historyStore.mjs",
+      "--watch-path=providers.mjs",
+      "--watch-path=src/contentPreferences.js",
+      "--watch-path=src/validation.js",
+      "server.mjs",
+    ],
+    { stdio: "inherit" },
+  ),
   spawn(npmCommand, ["exec", "vite"], { stdio: "inherit" }),
 ];
 

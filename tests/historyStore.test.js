@@ -1,0 +1,146 @@
+import assert from "node:assert/strict";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import test from "node:test";
+import { createHistoryStore } from "../historyStore.mjs";
+
+function generation(provider = "gemini") {
+  return {
+    provider,
+    providerLabel: provider === "gemini" ? "Gemini" : "Groq Qwen",
+    model: provider === "gemini" ? "gemini-test" : "qwen-test",
+  };
+}
+
+function validation(passed = 11, total = 11) {
+  return {
+    valid: passed === total,
+    checks: Array.from({ length: total }, (_, index) => ({
+      pass: index < passed,
+    })),
+  };
+}
+
+function recordInput(title, source = "原始 X 内容") {
+  return {
+    source: { content: source, sourceUrl: null },
+    draft: `# ${title}\n\n正文`,
+    preferences: { audience: "intermediate", tone: "warm" },
+    generation: generation(),
+    validation: validation(),
+  };
+}
+
+test("历史记录按最近更新时间倒序，修复追加版本并只保留最近三版", async (t) => {
+  const dataDir = await mkdtemp(join(tmpdir(), "x-to-xhs-history-"));
+  t.after(() => rm(dataDir, { recursive: true, force: true }));
+  const timestamps = [
+    "2026-07-25T10:00:00.000Z",
+    "2026-07-25T11:00:00.000Z",
+    "2026-07-25T12:00:00.000Z",
+    "2026-07-25T13:00:00.000Z",
+    "2026-07-25T14:00:00.000Z",
+  ];
+  const store = createHistoryStore({
+    dataDir,
+    now: () => new Date(timestamps.shift()),
+  });
+
+  const first = await store.create(recordInput("第一篇"));
+  const second = await store.create(recordInput("第二篇"));
+  await store.appendVersion(first.id, {
+    expectedVersion: 1,
+    draft: "# 第一篇修复一\n\n正文",
+    generation: generation("groq"),
+    validation: validation(10),
+  });
+  await store.appendVersion(first.id, {
+    expectedVersion: 2,
+    draft: "# 第一篇修复二\n\n正文",
+    generation: generation(),
+    validation: validation(),
+  });
+  const latest = await store.appendVersion(first.id, {
+    expectedVersion: 3,
+    draft: "# 第一篇最终版\n\n正文",
+    generation: generation(),
+    validation: validation(),
+  });
+
+  const list = await store.list();
+  assert.deepEqual(
+    list.records.map((record) => record.id),
+    [first.id, second.id],
+  );
+  assert.equal(latest.currentVersion, 4);
+  assert.deepEqual(
+    latest.versions.map((version) => version.version),
+    [2, 3, 4],
+  );
+  assert.equal(latest.title, "第一篇最终版");
+  assert.equal(latest.validation.valid, true);
+  assert.equal(latest.versions.at(-1).validation.valid, true);
+
+  const mode = (await stat(store.filePath)).mode & 0o777;
+  const directoryMode = (await stat(dataDir)).mode & 0o777;
+  assert.equal(mode, 0o600);
+  assert.equal(directoryMode, 0o700);
+  assert.doesNotMatch(await readFile(store.filePath, "utf8"), /api.?key/iu);
+});
+
+test("历史记录执行版本冲突检查、容量限制和删除", async (t) => {
+  const dataDir = await mkdtemp(join(tmpdir(), "x-to-xhs-history-"));
+  t.after(() => rm(dataDir, { recursive: true, force: true }));
+  let minute = 0;
+  const store = createHistoryStore({
+    dataDir,
+    maxRecords: 1,
+    now: () => new Date(`2026-07-25T10:${String(minute++).padStart(2, "0")}:00Z`),
+  });
+
+  const record = await store.create(recordInput("容量测试"));
+  await assert.rejects(
+    store.create(recordInput("第二条")),
+    /历史记录已达到1条/,
+  );
+  await assert.rejects(
+    store.appendVersion(record.id, {
+      expectedVersion: 9,
+      draft: "# 冲突版本\n\n正文",
+      generation: generation(),
+      validation: validation(),
+    }),
+    /已有更新/,
+  );
+
+  assert.deepEqual(await store.remove(record.id), {
+    ok: true,
+    id: record.id,
+  });
+  assert.equal((await store.list()).total, 0);
+  await assert.rejects(store.get(record.id), /不存在或已被删除/);
+});
+
+test("主历史文件损坏时从最近的有效备份读取且不覆盖原文件", async (t) => {
+  const dataDir = await mkdtemp(join(tmpdir(), "x-to-xhs-history-"));
+  t.after(() => rm(dataDir, { recursive: true, force: true }));
+  let hour = 10;
+  const store = createHistoryStore({
+    dataDir,
+    now: () => new Date(`2026-07-25T${hour++}:00:00Z`),
+  });
+
+  const record = await store.create(recordInput("备份测试"));
+  await store.appendVersion(record.id, {
+    expectedVersion: 1,
+    draft: "# 备份测试第二版\n\n正文",
+    generation: generation(),
+    validation: validation(),
+  });
+  await writeFile(store.filePath, "{not-json", "utf8");
+
+  const recovered = await store.get(record.id);
+  assert.equal(recovered.currentVersion, 1);
+  assert.equal(await readFile(store.filePath, "utf8"), "{not-json");
+});

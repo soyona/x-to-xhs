@@ -1,8 +1,9 @@
 import { createServer } from "node:http";
 import { chmod, readFile, rename, stat, writeFile } from "node:fs/promises";
-import { extname, join, normalize } from "node:path";
+import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ProxyAgent } from "undici";
+import { createHistoryStore } from "./historyStore.mjs";
 import {
   generateWithFallback,
   getProviderStatus,
@@ -13,6 +14,7 @@ import {
   buildContentPreferencePrompt,
   normalizeContentPreferences,
 } from "./src/contentPreferences.js";
+import { validateDraft } from "./src/validation.js";
 
 const rootDir = fileURLToPath(new URL(".", import.meta.url));
 
@@ -39,11 +41,17 @@ async function loadLocalEnv() {
 await loadLocalEnv();
 
 const port = Number(process.env.PORT || 8787);
+const serverHost = process.env.X_TO_XHS_HOST || "127.0.0.1";
 const bodyLimit = 64 * 1024;
 const proxyUrl =
   process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.ALL_PROXY;
 const externalDispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
 const envPath = join(rootDir, ".env");
+const historyDataDir = resolve(
+  rootDir,
+  process.env.X_TO_XHS_DATA_DIR || ".local-data",
+);
+const historyStore = createHistoryStore({ dataDir: historyDataDir });
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -145,7 +153,11 @@ export function buildSettingsUpdates(payload = {}, env = process.env) {
     } else if (apiKey) {
       updates[provider.keyName] = apiKey;
     }
-    if (model !== (env[provider.modelName] || provider.defaultModel)) {
+    const hasStoredKey = !isPlaceholderKey(env[provider.keyName]);
+    if (
+      (setting.clearKey !== true && (apiKey || hasStoredKey)) ||
+      model !== (env[provider.modelName] || provider.defaultModel)
+    ) {
       updates[provider.modelName] = model;
     }
   }
@@ -352,13 +364,34 @@ async function generateDraft(
   { skipProviders = [], preferences = {} } = {},
 ) {
   const source = await resolveSource(input);
+  const normalizedPreferences = normalizeContentPreferences(preferences);
   const prompt = await buildPrompt(source, preferences);
   const result = await generateWithFallback({
     prompt,
     dispatcher: externalDispatcher,
     skipProviders,
   });
-  return { ...result, source };
+  try {
+    const record = await historyStore.create({
+      source,
+      draft: result.draft,
+      preferences: normalizedPreferences,
+      generation: result,
+      validation: validateDraft(result.draft),
+    });
+    return {
+      ...result,
+      source,
+      historyId: record.id,
+      historyVersion: record.currentVersion,
+    };
+  } catch (error) {
+    return {
+      ...result,
+      source,
+      historyWarning: error.message,
+    };
+  }
 }
 
 async function repairDraft(payload) {
@@ -370,6 +403,8 @@ async function repairDraft(payload) {
     mode,
     skipProvider,
     preferences,
+    historyId,
+    historyVersion,
   } = payload;
   if (!input?.trim()) throw new Error("缺少原始 X 内容，无法修复草稿。");
   if (!draft?.trim()) throw new Error("缺少当前草稿，无法执行修复。");
@@ -389,24 +424,82 @@ async function repairDraft(payload) {
     dispatcher: externalDispatcher,
     skipProviders: skipProvider ? [skipProvider] : [],
   });
-  return { ...result, repairMode: mode };
+  try {
+    const validation = validateDraft(result.draft);
+    const record = historyId
+      ? await historyStore.appendVersion(historyId, {
+          expectedVersion: historyVersion,
+          draft: result.draft,
+          generation: result,
+          validation,
+        })
+      : await historyStore.create({
+          source: await resolveSource(input),
+          draft: result.draft,
+          preferences: normalizeContentPreferences(preferences),
+          generation: result,
+          validation,
+        });
+    return {
+      ...result,
+      repairMode: mode,
+      historyId: record.id,
+      historyVersion: record.currentVersion,
+    };
+  } catch (error) {
+    return {
+      ...result,
+      repairMode: mode,
+      historyId,
+      historyVersion,
+      historyWarning: error.message,
+    };
+  }
 }
 
 async function handleApi(request, response) {
-  if (request.method === "GET" && request.url === "/api/health") {
+  const apiUrl = new URL(request.url, "http://local");
+  const historyDetailMatch =
+    /^\/api\/history\/([^/]+)$/u.exec(apiUrl.pathname);
+
+  if (request.method === "GET" && apiUrl.pathname === "/api/health") {
     return sendJson(response, 200, settingsResponse());
   }
 
-  if (request.method === "POST" && request.url === "/api/settings") {
+  if (request.method === "POST" && apiUrl.pathname === "/api/settings") {
     return sendJson(response, 200, await saveSettings(await readJson(request)));
   }
 
-  if (request.method === "POST" && request.url === "/api/resolve") {
+  if (request.method === "GET" && apiUrl.pathname === "/api/history") {
+    return sendJson(
+      response,
+      200,
+      await historyStore.list({ limit: apiUrl.searchParams.get("limit") }),
+    );
+  }
+
+  if (request.method === "GET" && historyDetailMatch) {
+    return sendJson(
+      response,
+      200,
+      await historyStore.get(decodeURIComponent(historyDetailMatch[1])),
+    );
+  }
+
+  if (request.method === "DELETE" && historyDetailMatch) {
+    return sendJson(
+      response,
+      200,
+      await historyStore.remove(decodeURIComponent(historyDetailMatch[1])),
+    );
+  }
+
+  if (request.method === "POST" && apiUrl.pathname === "/api/resolve") {
     const { input } = await readJson(request);
     return sendJson(response, 200, await resolveSource(input));
   }
 
-  if (request.method === "POST" && request.url === "/api/generate") {
+  if (request.method === "POST" && apiUrl.pathname === "/api/generate") {
     const { input, preferences } = await readJson(request);
     return sendJson(
       response,
@@ -415,7 +508,7 @@ async function handleApi(request, response) {
     );
   }
 
-  if (request.method === "POST" && request.url === "/api/repair") {
+  if (request.method === "POST" && apiUrl.pathname === "/api/repair") {
     return sendJson(response, 200, await repairDraft(await readJson(request)));
   }
 
@@ -463,7 +556,7 @@ const server = createServer(async (request, response) => {
 });
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  server.listen(port, () => {
-    console.log(`X → 小红书 server: http://localhost:${port}`);
+  server.listen(port, serverHost, () => {
+    console.log(`X → 小红书 server: http://${serverHost}:${port}`);
   });
 }

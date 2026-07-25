@@ -45,13 +45,15 @@
 - 未通过项就地显示当前值、目标要求和“修复此部分”；通过项默认折叠。
 - 固定分区与审稿自查放在第 7 步，整稿顶部保留自动检查汇总。
 - 人工复核项不得计入自动失败数量，也不得触发自动重写。
-- 模型顺序固定：Gemini → Groq Qwen → OpenRouter Free。
+- 模型顺序固定：Gemini → Groq Qwen → 智谱 GLM → 硅基流动 Qwen →
+  OpenRouter Free。
 - API Key 只能存在本地服务端 `.env`：
   - 不写入 React 源码。
   - 不写入浏览器存储。
   - 健康检查和设置接口不得返回 Key。
   - 配置页密码框不得回显已保存 Key。
 - 不要把用户密钥、提示词中的输入正文或模型完整响应写入日志、测试快照、文档或提交信息。
+- 历史原文和草稿只能写入被 Git 忽略的本地数据目录，不得进入测试快照或文档。
 
 ## 权威与同步规则
 
@@ -63,6 +65,7 @@
 | 自动检查与人工复核 | `src/validation.js` | `src/PublishWorkflow.jsx`、`src/App.jsx`、测试、产品上下文 |
 | 修复策略 | `src/repairStrategy.js`、`server.mjs` | `src/RepairControls.jsx`、修复测试、activeContext |
 | API 设置安全 | `server.mjs`、`src/ApiSettingsDialog.jsx` | `.env.example`、安全测试、techContext |
+| 历史笔记 | `historyStore.mjs` | `server.mjs`、`src/HistoryDialog.jsx`、测试、techContext |
 
 ## 常用命令
 
@@ -110,14 +113,16 @@ npm run check
 |---|---|
 | `src/App.jsx` | 两栏主界面、生成/修复状态、健康状态、设置入口 |
 | `src/ApiSettingsDialog.jsx` | 右上角 API Key 与模型配置弹窗 |
+| `src/HistoryDialog.jsx` | 历史列表、版本详情、载入和删除弹窗 |
 | `src/contentPreferences.js` | 创作偏好字段、默认值、白名单清洗与 Prompt 注入 |
 | `src/PublishWorkflow.jsx` | 小红书 7 步发布、分段复制、内联检查与人工复核 |
 | `src/validation.js` | Markdown 解析、计数、自动检查和人工检查分组 |
 | `src/repairStrategy.js` | repair / revise / regenerate 策略选择 |
 | `src/xiaohongshuPublish.js` | 把 Markdown 拆成标题、正文、描述、标签 |
 | `src/xiaohongshuText.js` | 清理 Markdown 为可粘贴纯文本 |
-| `providers.mjs` | 三家模型适配、错误归一化和自动降级 |
+| `providers.mjs` | 五家模型适配、错误归一化和自动降级 |
 | `server.mjs` | 本地 HTTP API、X URL 解析、提示词组装、设置持久化 |
+| `historyStore.mjs` | 本地历史 JSON、备份、排序、限额与原子写入 |
 | `scripts/dev.mjs` | 同时启动 Node API 与 Vite |
 | `tests/` | Node 原生测试，覆盖供应商、设置、修复、验证和文本拆分 |
 
