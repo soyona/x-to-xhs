@@ -19,7 +19,31 @@ test("发布标题严格执行20字上限", () => {
   const result = validateDraft("# 这是一个刚好超过二十字限制的小红书发布标题呀\n\n正文");
   const titleCheck = result.checks.find((check) => check.id === "title");
   assert.equal(titleCheck.pass, false);
-  assert.match(titleCheck.requirement, /18–20字/);
+  assert.match(titleCheck.requirement, /18–20字.*2个Emoji.*8000字以上.*万字深度/);
+});
+
+test("标题同时满足字数、Emoji和深度钩子", () => {
+  const result = validateDraft(
+    "# 焦虑救星🔥超全干货AI实战进阶指南🚀\n\n正文",
+  );
+  const titleCheck = result.checks.find((check) => check.id === "title");
+
+  assert.equal(result.counts.titleCount, 18);
+  assert.equal(result.counts.titleEmojiCount, 2);
+  assert.equal(result.counts.titleHasDepthHook, true);
+  assert.equal(result.counts.titleLengthClaimValid, true);
+  assert.equal(titleCheck.pass, true);
+});
+
+test("短正文不能在标题中冒用万字深度", () => {
+  const result = validateDraft(
+    "# 别再踩坑🔥万字深度AI实战终极指南🚀\n\n精炼正文。",
+  );
+  const titleCheck = result.checks.find((check) => check.id === "title");
+
+  assert.equal(result.counts.titleLengthClaimValid, false);
+  assert.equal(titleCheck.pass, false);
+  assert.match(titleCheck.actual, /错误宣称万字/);
 });
 
 test("reports missing required sections", () => {
@@ -29,21 +53,31 @@ test("reports missing required sections", () => {
   assert.equal(result.checks.find((check) => check.id === "review").actual, "缺失");
 });
 
+test("正文只检查10000字上限，不强制达到5000字", () => {
+  const result = validateDraft("# 别再踩坑🔥万字深度AI实战终极指南🚀\n\n精炼正文。");
+  const bodyCheck = result.checks.find((check) => check.id === "body");
+
+  assert.equal(bodyCheck.pass, true);
+  assert.equal(bodyCheck.requirement, "正文按原文自然展开，不超过10000字");
+});
+
 test("检查固定结构、结尾、标签数量与标签格式", () => {
-  const draft = `# 这是一个用于测试规范检查器的合格标题呀
+  const chapters = `# 01 💡 实战落地
 
-## 框架总览
-
-一、第一部分
-二、第二部分
-
-## 实战落地
+## ▶️ 1.1 第一个节点
 
 实战内容
 
-## 结尾
+# 02 💡 核心复盘总结与结尾
 
-结尾内容
+## ▶️ 2.1 第二个节点
+
+复盘内容`;
+  const draft = `# 这是一个用于测试规范检查器的合格标题呀
+
+# 框架总览
+
+${chapters}
 
 ## 正文小结 / 摘要
 
@@ -86,10 +120,10 @@ test("检查项与Markdown规范一致且不再要求配图和排版建议", () 
     result.checks.map((check) => [check.id, check.requirement]),
   );
 
-  assert.equal(checks.get("tags"), "8–10个唯一标签");
+  assert.equal(checks.get("tags"), "恰好8个唯一标签");
   assert.equal(
     checks.get("structure"),
-    "含框架总览、至少2个一/二主体标题、实战落地、结尾",
+    "含#框架总览、2–15个#一级章节、每章1–3个##二级节点、实战落地和核心复盘；无伪分页信号",
   );
   assert.equal(
     checks.get("fixed-format"),
@@ -145,7 +179,7 @@ test("检查项严格按Markdown章节建立父子分组", () => {
   assert.equal(manualGroup.manual, true);
   assert.match(
     manualGroup.items.find((item) => item.id === "manual-cases").requirement,
-    /2–3个真实感案例.*1个失败复盘.*跨领域洞见/,
+    /可靠依据.*案例.*失败复盘.*跨领域洞见.*不得.*虚构/,
   );
 });
 

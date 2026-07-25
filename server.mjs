@@ -9,6 +9,10 @@ import {
   isPlaceholderKey,
   PROVIDERS,
 } from "./providers.mjs";
+import {
+  buildContentPreferencePrompt,
+  normalizeContentPreferences,
+} from "./src/contentPreferences.js";
 
 const rootDir = fileURLToPath(new URL(".", import.meta.url));
 
@@ -259,17 +263,26 @@ export async function resolveSource(input) {
   return { content, sourceUrl: trimmed, resolved: true };
 }
 
-async function buildPrompt(source) {
+export async function buildPrompt(source, preferences = {}) {
   const spec = await readFile(join(rootDir, "Long-form-post-prompt.md"), "utf8");
   const replacement = source.sourceUrl
     ? `${source.content}\n\n原始链接：${source.sourceUrl}`
     : source.content;
   const placeholder = "[在此直接粘贴X推文链接 或 完整推文内容]";
+  const inputHeading = "**本次要转化的X推文内容如下：**";
 
   if (!spec.includes(placeholder)) {
     throw new Error("Markdown 规范中缺少输入占位符，无法安全组装提示词。");
   }
-  return spec.replace(placeholder, replacement);
+  if (!spec.includes(inputHeading)) {
+    throw new Error("Markdown 规范中缺少输入分区，无法安全注入创作偏好。");
+  }
+  const preferencePrompt = buildContentPreferencePrompt(
+    normalizeContentPreferences(preferences),
+  );
+  return spec
+    .replace(inputHeading, `${preferencePrompt}\n\n${inputHeading}`)
+    .replace(placeholder, replacement);
 }
 
 function formatChecks(checks = []) {
@@ -287,9 +300,10 @@ export async function buildRepairPrompt({
   failedChecks = [],
   passedChecks = [],
   mode,
+  preferences = {},
 }) {
   const source = await resolveSource(input);
-  const basePrompt = await buildPrompt(source);
+  const basePrompt = await buildPrompt(source, preferences);
   const failedList = formatChecks(failedChecks);
   const passedList = passedChecks.length
     ? passedChecks.map((check) => `- ${check.label}：${check.actual}`).join("\n")
@@ -333,9 +347,12 @@ ${draft}
 只输出修复后的完整 Markdown 草稿，不要解释修改过程，不要输出前后对比。`;
 }
 
-async function generateDraft(input, { skipProviders = [] } = {}) {
+async function generateDraft(
+  input,
+  { skipProviders = [], preferences = {} } = {},
+) {
   const source = await resolveSource(input);
-  const prompt = await buildPrompt(source);
+  const prompt = await buildPrompt(source, preferences);
   const result = await generateWithFallback({
     prompt,
     dispatcher: externalDispatcher,
@@ -352,6 +369,7 @@ async function repairDraft(payload) {
     passedChecks,
     mode,
     skipProvider,
+    preferences,
   } = payload;
   if (!input?.trim()) throw new Error("缺少原始 X 内容，无法修复草稿。");
   if (!draft?.trim()) throw new Error("缺少当前草稿，无法执行修复。");
@@ -364,6 +382,7 @@ async function repairDraft(payload) {
     failedChecks,
     passedChecks: Array.isArray(passedChecks) ? passedChecks : [],
     mode,
+    preferences,
   });
   const result = await generateWithFallback({
     prompt,
@@ -388,8 +407,12 @@ async function handleApi(request, response) {
   }
 
   if (request.method === "POST" && request.url === "/api/generate") {
-    const { input } = await readJson(request);
-    return sendJson(response, 200, await generateDraft(input));
+    const { input, preferences } = await readJson(request);
+    return sendJson(
+      response,
+      200,
+      await generateDraft(input, { preferences }),
+    );
   }
 
   if (request.method === "POST" && request.url === "/api/repair") {

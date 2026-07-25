@@ -1,11 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { ApiSettingsDialog } from "./ApiSettingsDialog";
-import { AlertIcon, ArrowIcon, CheckIcon } from "./icons";
+import {
+  CONTENT_PREFERENCE_STORAGE_KEY,
+  DEFAULT_CONTENT_PREFERENCES,
+  normalizeContentPreferences,
+} from "./contentPreferences";
+import { AlertIcon, ArrowIcon } from "./icons";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { PublishWorkflow } from "./PublishWorkflow";
-import { RepairControls } from "./RepairControls";
 import { getRepairStrategy } from "./repairStrategy";
 import { validateDraft, validationGroups } from "./validation";
+import {
+  PROTOTYPE_DRAFT_FAILED,
+  PROTOTYPE_DRAFT_PASSED,
+  PROTOTYPE_INPUT,
+} from "./prototypeDraft";
 
 const repairCheckLabels = new Map(
   validationGroups.flatMap((group) =>
@@ -27,16 +36,49 @@ async function postJson(path, body) {
   return data;
 }
 
+const prototypeMode =
+  import.meta.env.DEV &&
+  new URLSearchParams(window.location.search).get("prototype") === "1";
+
+function loadContentPreferences() {
+  try {
+    const stored = window.localStorage.getItem(
+      CONTENT_PREFERENCE_STORAGE_KEY,
+    );
+    return stored
+      ? normalizeContentPreferences(JSON.parse(stored))
+      : { ...DEFAULT_CONTENT_PREFERENCES };
+  } catch {
+    return { ...DEFAULT_CONTENT_PREFERENCES };
+  }
+}
+
 export default function App() {
-  const [input, setInput] = useState("");
-  const [draft, setDraft] = useState("");
-  const [status, setStatus] = useState("idle");
+  const [input, setInput] = useState(prototypeMode ? PROTOTYPE_INPUT : "");
+  const [draft, setDraft] = useState(
+    prototypeMode ? PROTOTYPE_DRAFT_FAILED : "",
+  );
+  const [status, setStatus] = useState(prototypeMode ? "done" : "idle");
   const [error, setError] = useState("");
-  const [generation, setGeneration] = useState(null);
+  const [generation, setGeneration] = useState(
+    prototypeMode
+      ? {
+          provider: "prototype",
+          providerLabel: "本地交互稿",
+          model: "不调用模型",
+          attempts: [],
+        }
+      : null,
+  );
   const [repairAttempts, setRepairAttempts] = useState(0);
   const [lastRepairProvider, setLastRepairProvider] = useState("");
   const [draftHistory, setDraftHistory] = useState([]);
+  const [repairScope, setRepairScope] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState("preferences");
+  const [contentPreferences, setContentPreferences] = useState(
+    loadContentPreferences,
+  );
   const [health, setHealth] = useState({
     configured: false,
     providers: [],
@@ -50,14 +92,6 @@ export default function App() {
   }, []);
 
   const validation = useMemo(() => validateDraft(draft), [draft]);
-  const validationChecks = useMemo(
-    () => new Map(validation.checks.map((check) => [check.id, check])),
-    [validation],
-  );
-  const repairStrategy = useMemo(
-    () => getRepairStrategy(validation),
-    [validation],
-  );
   const isGenerating = status === "generating";
   const isRepairing = status === "repairing";
   const isWorking = isGenerating || isRepairing;
@@ -73,8 +107,26 @@ export default function App() {
     setRepairAttempts(0);
     setLastRepairProvider("");
     setDraftHistory([]);
+    setRepairScope(null);
     try {
-      const result = await postJson("/api/generate", { input });
+      const result = prototypeMode
+        ? await new Promise((resolve) => {
+            window.setTimeout(
+              () =>
+                resolve({
+                  draft: PROTOTYPE_DRAFT_FAILED,
+                  provider: "prototype",
+                  providerLabel: "本地交互稿",
+                  model: "不调用模型",
+                  attempts: [],
+                }),
+              650,
+            );
+          })
+        : await postJson("/api/generate", {
+            input,
+            preferences: contentPreferences,
+          });
       setDraft(result.draft);
       setGeneration(result);
       setStatus("done");
@@ -89,33 +141,78 @@ export default function App() {
     setHealth(result);
   }
 
-  async function repair() {
+  function saveContentPreferences(preferences) {
+    const normalized = normalizeContentPreferences(preferences);
+    setContentPreferences(normalized);
+    window.localStorage.setItem(
+      CONTENT_PREFERENCE_STORAGE_KEY,
+      JSON.stringify(normalized),
+    );
+  }
+
+  function openSettings(tab = "preferences") {
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  }
+
+  async function repair(scope = null) {
     if (!draft || validation.valid || isWorking || repairAttempts >= 2) return;
     const repairChecks = validation.checks.map((check) => ({
       ...check,
       label: repairCheckLabels.get(check.id) || check.label,
     }));
-    const failedChecks = repairChecks.filter((check) => !check.pass);
+    const requestedIds = new Set(scope?.checkIds || []);
+    const failedChecks = repairChecks.filter(
+      (check) =>
+        !check.pass && (!requestedIds.size || requestedIds.has(check.id)),
+    );
+    if (!failedChecks.length) return;
     const passedChecks = repairChecks.filter((check) => check.pass);
+    const scopedStrategy = getRepairStrategy({
+      ...validation,
+      checks: failedChecks,
+    });
     const hasAlternativeProvider = health.providers.some(
       (provider) =>
         provider.configured && provider.id !== lastRepairProvider,
     );
     setStatus("repairing");
     setError("");
+    setRepairScope(
+      scope || {
+        id: "all",
+        label: "全部未通过项目",
+        checkIds: failedChecks.map((check) => check.id),
+      },
+    );
 
     try {
-      const result = await postJson("/api/repair", {
-        input,
-        draft,
-        failedChecks,
-        passedChecks,
-        mode: repairStrategy.mode,
-        skipProvider:
-          repairAttempts >= 1 && hasAlternativeProvider
-            ? lastRepairProvider
-            : null,
-      });
+      const result = prototypeMode
+        ? await new Promise((resolve) => {
+            window.setTimeout(
+              () =>
+                resolve({
+                  draft: PROTOTYPE_DRAFT_PASSED,
+                  provider: "prototype",
+                  providerLabel: "本地交互稿",
+                  model: "不调用模型",
+                  attempts: [],
+                }),
+              850,
+            );
+          })
+        : await postJson("/api/repair", {
+            input,
+            draft,
+            failedChecks,
+            passedChecks,
+            mode: scopedStrategy.mode,
+            preferences: contentPreferences,
+            skipProvider:
+              repairAttempts >= 1 && hasAlternativeProvider
+                ? lastRepairProvider
+                : null,
+          });
       setDraftHistory((history) =>
         [...history, { draft, generation }].slice(-2),
       );
@@ -124,6 +221,7 @@ export default function App() {
       setLastRepairProvider(result.provider);
       setRepairAttempts((attempts) => attempts + 1);
       setStatus("done");
+      setRepairScope(null);
     } catch (repairError) {
       setError(repairError.message);
       setStatus("error");
@@ -138,6 +236,7 @@ export default function App() {
     setDraftHistory((history) => history.slice(0, -1));
     setError("");
     setStatus("done");
+    setRepairScope(null);
   }
 
   return (
@@ -157,13 +256,14 @@ export default function App() {
             {health.configured
               ? `本地运行 · ${configuredCount}/${health.providers.length} 个服务已配置`
               : "本地运行 · 等待 API Key"}
+            {prototypeMode && " · 交互稿"}
           </div>
           <button
             className="settings-button"
             type="button"
-            onClick={() => setSettingsOpen(true)}
+            onClick={() => openSettings("preferences")}
           >
-            API 配置
+            设置
           </button>
         </div>
       </header>
@@ -200,7 +300,7 @@ export default function App() {
               {isGenerating && <span className="spinner" aria-hidden="true" />}
             </button>
 
-            {error && (
+            {error && !draft && (
               <div className="error-message" role="alert">
                 <AlertIcon />
                 <span>{error}</span>
@@ -265,168 +365,57 @@ export default function App() {
               <span className="format-label">按发布流程分段复制</span>
             </div>
             <div className="toolbar-actions">
-              {draft && (
-                <span
+                  {draft && (
+                    <span
                   className={`validation-summary ${
                     validation.valid ? "valid" : "invalid"
                   }`}
-                >
-                  {validation.valid ? "规范通过" : "需要调整"}
-                </span>
-              )}
+                    >
+                  {validation.valid
+                    ? `${validation.checks.length}/${validation.checks.length} 通过`
+                    : `${validation.checks.filter((check) => check.pass).length}/${validation.checks.length} 通过 · ${
+                        validation.checks.filter((check) => !check.pass).length
+                      } 需修复`}
+                    </span>
+                  )}
             </div>
           </div>
-          <div className={`document-scroll ${isWorking ? "is-loading" : ""}`}>
-            {isWorking ? (
+          <div
+            className={`document-scroll ${
+              isGenerating ? "is-loading" : ""
+            } ${isRepairing ? "is-repairing" : ""}`}
+          >
+            {isGenerating ? (
               <div className="generating-state" aria-live="polite">
                 <span className="writing-line line-one" />
                 <span className="writing-line line-two" />
                 <span className="writing-line line-three" />
                 <h2>
-                  {isRepairing
-                    ? "正在按规范修复当前长文"
-                    : "正在深度重构这条 X 帖子"}
+                  正在深度重构这条 X 帖子
                 </h2>
                 <p>
-                  {isRepairing
-                    ? "将保留上一版本，完成后自动重新检查全部规范。"
-                    : "正按 Gemini → Groq Qwen → OpenRouter Free 自动尝试，并生成完整长文。"}
+                  正按 Gemini → Groq Qwen → OpenRouter Free 自动尝试，并生成完整长文。
                 </p>
               </div>
             ) : (
               draft ? (
-                <PublishWorkflow draft={draft} />
+                <PublishWorkflow
+                  draft={draft}
+                  validation={validation}
+                  attempts={repairAttempts}
+                  historyCount={draftHistory.length}
+                  isRepairing={isRepairing}
+                  repairScope={repairScope}
+                  repairError={draft ? error : ""}
+                  onRepair={repair}
+                  onRestore={restorePreviousDraft}
+                />
               ) : (
                 <MarkdownPreview markdown="" />
               )
             )}
           </div>
         </section>
-
-        <aside className="validation-panel" aria-labelledby="validation-heading">
-          <div className="panel-header">
-            <div className="panel-title">
-              <span className="step-number">03</span>
-              <h2 id="validation-heading">规范检查</h2>
-            </div>
-          </div>
-
-          <div className="validation-content">
-            <p className="panel-intro">
-              检查可确定验证的 Markdown 输出要求。
-            </p>
-            <div className="check-groups">
-              {validationGroups.map((group) => {
-                const groupItems = group.items
-                  .map((item) => ({
-                    ...item,
-                    check: item.manual
-                      ? null
-                      : validationChecks.get(item.id),
-                  }))
-                  .filter((item) => item.manual || item.check);
-                const automaticItems = groupItems.filter((item) => item.check);
-                const groupPass = automaticItems.every(
-                  (item) => item.check.pass,
-                );
-
-                return (
-                  <section
-                    className={`check-group ${
-                      group.manual
-                        ? "manual"
-                        : draft
-                          ? groupPass
-                            ? "pass"
-                            : "fail"
-                          : "pending"
-                    }`}
-                    key={group.id}
-                    aria-labelledby={`check-group-${group.id}`}
-                  >
-                    <div className="check-group-heading">
-                      <span className="check-group-number">{group.number}</span>
-                      <strong id={`check-group-${group.id}`}>
-                        {group.label}
-                      </strong>
-                      <span className="check-group-status">
-                        {group.manual
-                          ? "发布前确认"
-                          : draft
-                          ? groupPass
-                            ? "通过"
-                            : `${automaticItems.filter((item) => !item.check.pass).length}项未通过`
-                          : "待生成"}
-                      </span>
-                    </div>
-                    <div className="check-list">
-                      {groupItems.map((item) => (
-                        <div
-                          className={`check-row ${
-                            item.manual
-                              ? "manual"
-                              : draft
-                              ? item.check.pass
-                                ? "pass"
-                                : "fail"
-                              : "pending"
-                          }`}
-                          key={item.id}
-                        >
-                          <span className="check-icon">
-                            {!item.manual && draft && item.check.pass ? (
-                              <CheckIcon />
-                            ) : (
-                              <AlertIcon />
-                            )}
-                          </span>
-                          <span className="check-copy">
-                            <strong>{item.label}</strong>
-                            <small>
-                              {item.manual
-                                ? item.requirement
-                                : item.check.requirement}
-                            </small>
-                          </span>
-                          <span className="check-actual">
-                            {item.manual
-                              ? "人工确认"
-                              : draft
-                                ? item.check.actual
-                                : "待生成"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                );
-              })}
-            </div>
-            {draft && (
-              <RepairControls
-                validation={validation}
-                strategy={repairStrategy}
-                attempts={repairAttempts}
-                historyCount={draftHistory.length}
-                isRepairing={isRepairing}
-                onRepair={repair}
-                onRestore={restorePreviousDraft}
-              />
-            )}
-            <div className="validation-note">
-              <strong>
-                {draft
-                  ? validation.valid
-                    ? "这份草稿已通过结构与字数检查。"
-                    : `${validation.checks.filter((check) => !check.pass).length} 项未通过，可使用上方自动处理。`
-                  : "生成后自动核对"}
-              </strong>
-              <p>
-                自动检查结构和字数；二度创作、语气、案例真实性与内容质量仍需发布前人工复核。
-              </p>
-            </div>
-          </div>
-        </aside>
       </main>
 
       <footer className="statusbar">
@@ -435,15 +424,17 @@ export default function App() {
             ? `服务：${generation.providerLabel} · 模型：${generation.model}`
             : "默认：Gemini · 备用：Groq Qwen · 兜底：OpenRouter Free"}
         </span>
-        <span>规范：Long-form-post-prompt.md</span>
         <span className="secure-note">API Key 仅保留在本地服务端</span>
       </footer>
 
       <ApiSettingsDialog
         open={settingsOpen}
         health={health}
+        preferences={contentPreferences}
+        initialTab={settingsTab}
         onClose={() => setSettingsOpen(false)}
         onSave={saveSettings}
+        onSavePreferences={saveContentPreferences}
       />
     </div>
   );

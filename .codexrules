@@ -29,8 +29,8 @@
 ## 不可破坏的产品约束
 
 - 默认使用中文界面和中文回复。
-- 页面只有三个核心工作区：`01 粘贴 X 内容`、`02 小红书长文`、`03 规范检查`。
-- 三个工作区保持同一可用高度；整页禁止上下或横向滚动，内容只能在各面板内部滚动。
+- 页面只有两个核心工作区：`01 粘贴 X 内容`、`02 小红书长文`。
+- 两个工作区保持同一可用高度；整页禁止上下或横向滚动，内容只能在各面板内部滚动。
 - `02` 不能提供“一次复制全文”作为主流程，必须按小红书「写长文」的 7 步流程分段处理：
   1. 长文标题
   2. 长文正文
@@ -39,9 +39,11 @@
   5. 正文描述
   6. 标签
   7. 检查并发布
-- `03` 必须保持父子分组，并区分：
+- 规范检查必须融合到 `02` 对应的发布步骤，并区分：
   - 11 项可自动判定条件。
   - 8 项发布前人工内容复核。
+- 未通过项就地显示当前值、目标要求和“修复此部分”；通过项默认折叠。
+- 固定分区与审稿自查放在第 7 步，整稿顶部保留自动检查汇总。
 - 人工复核项不得计入自动失败数量，也不得触发自动重写。
 - 模型顺序固定：Gemini → Groq Qwen → OpenRouter Free。
 - API Key 只能存在本地服务端 `.env`：
@@ -58,7 +60,7 @@
 | 长文内容规范 | `Long-form-post-prompt.md` | `src/validation.js`、相关测试、memory-bank 摘要 |
 | 供应商顺序与默认模型 | `providers.mjs` | 设置页、README、测试 |
 | 发布分段流程 | `src/PublishWorkflow.jsx`、`src/xiaohongshuPublish.js` | 对应测试、产品上下文 |
-| 自动检查与人工复核 | `src/validation.js` | `src/App.jsx`、测试、产品上下文 |
+| 自动检查与人工复核 | `src/validation.js` | `src/PublishWorkflow.jsx`、`src/App.jsx`、测试、产品上下文 |
 | 修复策略 | `src/repairStrategy.js`、`server.mjs` | `src/RepairControls.jsx`、修复测试、activeContext |
 | API 设置安全 | `server.mjs`、`src/ApiSettingsDialog.jsx` | `.env.example`、安全测试、techContext |
 
@@ -106,9 +108,10 @@ npm run check
 
 | 文件 | 职责 |
 |---|---|
-| `src/App.jsx` | 三栏主界面、生成/修复状态、健康状态、设置入口 |
+| `src/App.jsx` | 两栏主界面、生成/修复状态、健康状态、设置入口 |
 | `src/ApiSettingsDialog.jsx` | 右上角 API Key 与模型配置弹窗 |
-| `src/PublishWorkflow.jsx` | 小红书 7 步发布与分段复制 |
+| `src/contentPreferences.js` | 创作偏好字段、默认值、白名单清洗与 Prompt 注入 |
+| `src/PublishWorkflow.jsx` | 小红书 7 步发布、分段复制、内联检查与人工复核 |
 | `src/validation.js` | Markdown 解析、计数、自动检查和人工检查分组 |
 | `src/repairStrategy.js` | repair / revise / regenerate 策略选择 |
 | `src/xiaohongshuPublish.js` | 把 Markdown 拆成标题、正文、描述、标签 |

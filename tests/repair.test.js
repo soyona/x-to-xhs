@@ -6,7 +6,7 @@ import {
   getRepairStrategy,
 } from "../src/repairStrategy.js";
 
-function validationWithFailures(count, { bodyCount = 4500, structure } = {}) {
+function validationWithFailures(count, { bodyCount = 6500, structure } = {}) {
   const checks = Array.from({ length: 11 }, (_, index) => ({
     id: index === 7 ? "structure" : `check-${index}`,
     label: `检查${index + 1}`,
@@ -23,6 +23,10 @@ test("按失败数量选择局部修复、结构化修订或完整重生", () =>
   assert.equal(getRepairStrategy(validationWithFailures(7)).mode, "regenerate");
   assert.equal(
     getRepairStrategy(validationWithFailures(1, { bodyCount: 2000 })).mode,
+    "repair",
+  );
+  assert.equal(
+    getRepairStrategy(validationWithFailures(1, { bodyCount: 0 })).mode,
     "regenerate",
   );
   assert.equal(MAX_REPAIR_ATTEMPTS, 2);
@@ -41,6 +45,10 @@ test("修复提示词包含失败值、通过项、当前草稿和原始内容",
     ],
     passedChecks: [{ label: "标签", actual: "9个" }],
     mode: "repair",
+    preferences: {
+      audience: "professional",
+      additionalInstructions: "保留工程细节。",
+    },
   });
 
   assert.match(prompt, /原始 X 内容/);
@@ -48,6 +56,8 @@ test("修复提示词包含失败值、通过项、当前草稿和原始内容",
   assert.match(prompt, /标签：9个/);
   assert.match(prompt, /# 当前草稿/);
   assert.match(prompt, /只修复失败项目/);
+  assert.match(prompt, /目标读者：专业人士/);
+  assert.match(prompt, /保留工程细节/);
   assert.match(prompt, /只输出修复后的完整 Markdown 草稿/);
 });
 
@@ -56,7 +66,11 @@ test("完整重生模式明确放弃不完整结构", async () => {
     input: "原始内容",
     draft: "残缺草稿",
     failedChecks: [
-      { label: "正文", actual: "800字", requirement: "4200–5200字" },
+      {
+        label: "正文",
+        actual: "10001字",
+        requirement: "按原文自然展开，不超过10000字",
+      },
     ],
     mode: "regenerate",
   });

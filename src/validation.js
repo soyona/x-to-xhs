@@ -1,8 +1,9 @@
 const sectionMatchers = {
   overview: /(?:^|\n)#{0,3}\s*(?:\*\*)?框架总览/,
-  practice: /(?:^|\n)#{0,3}\s*(?:\*\*)?实战落地/,
+  practice:
+    /(?:^|\n)#{0,3}\s*(?:\*\*)?(?:(?:0[1-9]|1[0-5])\s+💡\s+|▶️?\s+\d{1,2}\.\d+\s+)?[^\n]*实战落地/,
   conclusion:
-    /(?:^|\n)#{0,3}\s*(?:\*\*)?(?:[一二三四五六七八九十]+[、.]\s*)?(?:结尾|结语|写在最后)/,
+    /(?:^|\n)#{0,3}\s*(?:\*\*)?(?:(?:0[1-9]|1[0-5])\s+💡\s+|▶️?\s+\d{1,2}\.\d+\s+)?[^\n]*(?:核心复盘总结|结尾|结语|写在最后)/,
   summary: /(?:^|\n)#{0,3}\s*(?:\*\*)?(?:正文小结\s*[\/／]\s*摘要|正文小结|摘要)/,
   tags: /(?:^|\n)#{0,3}\s*(?:\*\*)?推荐标签/,
   review: /(?:^|\n)#{0,3}\s*(?:\*\*)?【?审稿自查】?/,
@@ -75,7 +76,7 @@ export const validationGroups = [
         id: "manual-cases",
         label: "案例与洞见",
         manual: true,
-        requirement: "2–3个真实感案例＋1个失败复盘＋跨领域洞见",
+        requirement: "有可靠依据时使用案例、失败复盘和跨领域洞见；不得为凑篇幅虚构",
       },
       {
         id: "manual-tone",
@@ -99,7 +100,8 @@ export const validationGroups = [
         id: "manual-layout",
         label: "排版可读性",
         manual: true,
-        requirement: "重点加粗、空行、编号、短段落；每800–1000字缓冲",
+        requirement:
+          "自然段不超过100字；列表行20–30字；用章节标题和空行组织节奏，无伪分页信号",
       },
       {
         id: "manual-summary-tags",
@@ -127,6 +129,13 @@ function stripMarkdown(value) {
 
 function countPlatformCharacters(value = "") {
   return Array.from(value.trim()).length;
+}
+
+function countEmoji(value = "") {
+  const segmenter = new Intl.Segmenter("zh", { granularity: "grapheme" });
+  return Array.from(segmenter.segment(value)).filter(({ segment }) =>
+    /\p{Extended_Pictographic}/u.test(segment),
+  ).length;
 }
 
 export function countCharacters(value = "") {
@@ -192,6 +201,66 @@ function bodyText(markdown) {
   return markdown.slice(start, end);
 }
 
+function inspectChapterStructure(body) {
+  const chapterPattern =
+    /(?:^|\n)#\s+(0[1-9]|1[0-5])\s+💡\s+[^\n]+/gu;
+  const chapterMatches = Array.from(body.matchAll(chapterPattern)).map(
+    (match) => {
+      const leadingBreak = match[0].startsWith("\n") ? 1 : 0;
+      return {
+        number: Number(match[1]),
+        start: match.index + leadingBreak,
+        contentStart: match.index + match[0].length,
+      };
+    },
+  );
+  const expectedNumbers = chapterMatches.map((_, index) => index + 1);
+  const numbersAreSequential = chapterMatches.every(
+    (chapter, index) => chapter.number === expectedNumbers[index],
+  );
+  const chapterCountValid =
+    chapterMatches.length >= 2 && chapterMatches.length <= 15;
+
+  const chapters = chapterMatches.map((chapter, index) => {
+    const end = chapterMatches[index + 1]?.start ?? body.length;
+    const content = body.slice(chapter.contentStart, end);
+    const nodePattern =
+      /(?:^|\n)##\s+▶️?\s+(\d{1,2})\.(\d+)\s+[^\n]+/gu;
+    const nodeMatches = Array.from(content.matchAll(nodePattern)).map(
+      (match) => ({
+        chapterNumber: Number(match[1]),
+        nodeNumber: Number(match[2]),
+      }),
+    );
+    const nodesAreSequential = nodeMatches.every(
+      (node, nodeIndex) =>
+        node.chapterNumber === chapter.number &&
+        node.nodeNumber === nodeIndex + 1,
+    );
+
+    return {
+      nodeCountValid: nodeMatches.length >= 1 && nodeMatches.length <= 3,
+      nodesAreSequential,
+    };
+  });
+
+  const hasFalsePaginationSignal =
+    /(?:^|\n)\s*---\s*(?:\n|$)|未完待续|下滑查看下一章/u.test(body);
+
+  return {
+    chapterCount: chapterMatches.length,
+    valid:
+      chapterCountValid &&
+      numbersAreSequential &&
+      !hasFalsePaginationSignal &&
+      chapters.every(
+        (chapter) =>
+          chapter.nodeCountValid &&
+          chapter.nodesAreSequential,
+      ),
+  };
+}
+
 export function validateDraft(markdown = "") {
   const title = extractTitle(markdown);
   const body = bodyText(markdown);
@@ -207,7 +276,11 @@ export function validateDraft(markdown = "") {
   const review = getSection(markdown, "review", []);
 
   const titleCount = countPlatformCharacters(title);
+  const titleEmojiCount = countEmoji(title);
+  const titleHasDepthHook = /超全干货|万字深度/u.test(title);
   const bodyCount = countCharacters(body);
+  const titleLengthClaimValid =
+    !/万字深度/u.test(title) || bodyCount >= 8000;
   const openingCount = countCharacters(opening);
   const practiceCount = countCharacters(
     practice.replace(sectionMatchers.practice, ""),
@@ -230,10 +303,7 @@ export function validateDraft(markdown = "") {
     tagCount > 0 &&
     tagLines[0].replace(/#[\p{L}\p{N}_-]+/gu, "").trim() === "";
   const reviewCount = countListItems(review);
-  const numberedHeadings = (
-    body.match(/(?:^|\n)\s*(?:#{1,3}\s*)?(?:\*\*)?[一二三四五六七八九十]+[、.]/g) ||
-    []
-  ).length;
+  const chapterStructure = inspectChapterStructure(body);
   const summaryMatch = headingMatch(markdown, sectionMatchers.summary);
   const tagsMatch = headingMatch(markdown, sectionMatchers.tags);
   const reviewMatch = headingMatch(markdown, sectionMatchers.review);
@@ -271,36 +341,44 @@ export function validateDraft(markdown = "") {
     sectionMatchers.overview.test(markdown) &&
     sectionMatchers.practice.test(markdown) &&
     sectionMatchers.conclusion.test(markdown) &&
-    numberedHeadings >= 2;
+    chapterStructure.valid;
 
   const checks = [
     {
       id: "title",
       label: "标题",
-      requirement: "标题18–20字（发布页上限20字）",
-      actual: `${titleCount}字`,
-      pass: titleCount >= 18 && titleCount <= 20,
+      requirement:
+        "标题18–20字，恰好2个Emoji；默认含“超全干货”，正文8000字以上才可用“万字深度”",
+      actual: `${titleCount}字，${titleEmojiCount}个Emoji，${
+        titleHasDepthHook ? "含深度钩子" : "缺少深度钩子"
+      }，${titleLengthClaimValid ? "篇幅表述真实" : "错误宣称万字"}`,
+      pass:
+        titleCount >= 18 &&
+        titleCount <= 20 &&
+        titleEmojiCount === 2 &&
+        titleHasDepthHook &&
+        titleLengthClaimValid,
     },
     {
       id: "body",
       label: "正文",
-      requirement: "正文4200–5200字",
+      requirement: "正文按原文自然展开，不超过10000字",
       actual: `${bodyCount}字`,
-      pass: bodyCount >= 4200 && bodyCount <= 5200,
+      pass: bodyCount > 0 && bodyCount <= 10000,
     },
     {
       id: "opening",
       label: "开头",
-      requirement: "开头380–450字",
+      requirement: "开头简洁完整，建议150–450字",
       actual: opening ? `${openingCount}字` : "无法识别",
-      pass: openingCount >= 380 && openingCount <= 450,
+      pass: openingCount > 0 && openingCount <= 450,
     },
     {
       id: "practice",
       label: "实战落地",
-      requirement: "实战落地不少于1200字",
+      requirement: "实战落地按主题需要展开，不设最低字数",
       actual: practice ? `${practiceCount}字` : "缺失",
-      pass: practiceCount >= 1200,
+      pass: practiceCount > 0,
     },
     {
       id: "summary",
@@ -319,15 +397,18 @@ export function validateDraft(markdown = "") {
     {
       id: "tags",
       label: "推荐标签",
-      requirement: "8–10个唯一标签",
+      requirement: "恰好8个唯一标签",
       actual: `${tagCount}个`,
-      pass: tagCount >= 8 && tagCount <= 10,
+      pass: tagCount === 8,
     },
     {
       id: "structure",
       label: "正文结构",
-      requirement: "含框架总览、至少2个一/二主体标题、实战落地、结尾",
-      actual: structureValid ? "完整" : "不完整",
+      requirement:
+        "含#框架总览、2–15个#一级章节、每章1–3个##二级节点、实战落地和核心复盘；无伪分页信号",
+      actual: structureValid
+        ? `${chapterStructure.chapterCount}章，结构完整`
+        : `${chapterStructure.chapterCount}章，结构不完整`,
       pass: structureValid,
     },
     {
@@ -358,6 +439,9 @@ export function validateDraft(markdown = "") {
     valid: checks.every((check) => check.pass),
     counts: {
       titleCount,
+      titleEmojiCount,
+      titleHasDepthHook,
+      titleLengthClaimValid,
       bodyCount,
       openingCount,
       practiceCount,

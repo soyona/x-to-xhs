@@ -4,11 +4,12 @@ export function getRepairStrategy(validation) {
   const failedChecks = validation.checks.filter((check) => !check.pass);
   const failedCount = failedChecks.length;
   const severe =
-    validation.counts.bodyCount < 2940 ||
+    validation.counts.bodyCount === 0 ||
     failedChecks.some(
       (check) =>
         check.id === "structure" &&
-        ["不完整", "缺失", "无法识别"].includes(check.actual),
+        (["不完整", "缺失", "无法识别"].includes(check.actual) ||
+          check.actual.includes("结构不完整")),
     );
 
   if (severe || failedCount >= 7) {

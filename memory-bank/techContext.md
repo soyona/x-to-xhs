@@ -68,6 +68,10 @@ npm start
 
 请求体上限为 64 KiB。
 
+`/api/generate` 和 `/api/repair` 可携带 `preferences`。服务端仅接受
+`src/contentPreferences.js` 声明的枚举值，并限制自由文本长度；偏好不写入
+`.env`，由浏览器本地存储持久化。
+
 ## 密钥安全
 
 - `.env` 在 `.gitignore` 中。
