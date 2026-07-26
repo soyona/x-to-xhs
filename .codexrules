@@ -2,20 +2,44 @@
 
 本文件是新会话进入本仓库时唯一的规则入口。不要默认全仓扫描；先按下面的读取顺序获取任务所需信息。
 
-## 首次读取顺序
+# Codex 项目硬性约束
 
-1. 本文件。
-2. `memory-bank/activeContext.md`：当前状态、已知问题和下一步。
-3. 根据任务只读取相关专题：
-   - 产品范围与用户流程：`memory-bank/productContext.md`
-   - 技术栈与运行方式：`memory-bank/techContext.md`
-   - 架构、数据流与模块职责：`memory-bank/systemPatterns.md`
-   - 已完成能力与历史节点：`memory-bank/progress.md`
-4. 涉及生成内容规范时，必须直接读取
-   `Long-form-post-prompt.md`。它是内容合同的最高权威，memory-bank
-   只做摘要。
+## 🛑 Token 节约与读取红线（严格执行）
 
-禁止为了“恢复上下文”无差别通读整个仓库或全部 memory-bank；按任务渐进读取。
+1. **启动时仅允许读取本文件**。严禁在接收到用户具体的开发需求前主动读取任何其他文件。
+2. **禁止预加载大文档**：
+   - `Long-form-post-prompt.md` 和 `design-*.md` 单次消耗极高，**除非用户明确要求“修改 Prompt 规范”，否则严禁读取！**
+3. **Memory Bank 严格按需读取**：
+   - 默认只读 `memory-bank/activeContext.md`（且该文件须保持在 100 行以内）。
+   - 严禁一次性读取多个 `memory-bank/*.md` 文件。
+4. **代码读取原则**：
+   - 优先使用 `grep` 或 `search` 定位具体函数/变量，只查看具体代码片段，禁止无脑读取整个 `.jsx` / `.js` 文件。
+
+
+## 🛑 Shell 工具与文件搜索红线（严格执行）
+
+1. **禁止递归扫描文档**：
+   - 严禁执行 `rg --files`、`find . -name "*.md"` 或任何针对 `*.md` 的全局扫描命令。
+   - 寻找代码时，只能针对具体的函数名或文件名进行精准 `grep`，禁止通配符全仓搜索。
+
+2. **忽略 Codex 全局记忆**：
+   - 不要搜索或读取 `/Users/.../.codex/memories/MEMORY.md`。
+
+3. **读取阻断**：
+   - 除非用户在当前对话中明确指明路径，否则**严禁读取**以下大文件：
+     - `Long-form-post-prompt.md`
+     - `design-*.md`
+
+## 📝 记忆写入规则（防止 MEMORY.md 膨胀）
+
+1. **单项目单一指针**：写入 MEMORY.md 时，同一项目的状态必须覆盖/更新原节点，严禁追加重复的 Task Group 或旧 Rollout 快照。
+2. **拒绝冗余日志**：严禁将完整的测试输出、Prompt 正文、报错日志全文写入 MEMORY.md。
+ 
+## 🛑 记忆库 (MEMORY.md) 维护禁令
+
+1. **禁止自动追加 Task/Rollout 快照**：除非用户明确要求“更新 MEMORY.md”，否则在会话结束或任务完成时，严禁自行向 `~/.codex/memories/MEMORY.md` 追加任务过程、测试日志或中间状态。
+2. **记忆库上限**：`MEMORY.md` 严格保持为全局偏好索引，绝对禁止存放具体的代码片段或 Prompt 模板。
+
 
 ## 项目定位
 

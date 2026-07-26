@@ -61,6 +61,47 @@ test("正文只检查10000字上限，不强制达到5000字", () => {
   assert.equal(bodyCheck.requirement, "正文按原文自然展开，不超过10000字");
 });
 
+test("摘要必须同时满足字数与三块编号排版", () => {
+  const opening = "开场价值".repeat(13);
+  const first = "第一方法".repeat(10);
+  const second = "第二方法".repeat(10);
+  const third = "第三方法".repeat(10);
+  const closing = "落地行动".repeat(13);
+  const formattedSummary = `${opening}
+
+1. ${first}
+2. ${second}
+3. ${third}
+
+${closing}`;
+  const formatted = validateDraft(`## 正文小结 / 摘要
+
+${formattedSummary}
+
+## 推荐标签`);
+  const formattedCheck = formatted.checks.find(
+    (check) => check.id === "summary",
+  );
+
+  assert.equal(formatted.counts.summaryCount, 227);
+  assert.equal(formatted.counts.summaryBlockCount, 3);
+  assert.equal(formatted.counts.summaryNumberedItemCount, 3);
+  assert.equal(formattedCheck.pass, true);
+
+  const unformatted = validateDraft(`## 正文小结 / 摘要
+
+${formattedSummary.replace(/\n+/gu, " ")}
+
+## 推荐标签`);
+  const unformattedCheck = unformatted.checks.find(
+    (check) => check.id === "summary",
+  );
+
+  assert.equal(unformatted.counts.summaryCount, 227);
+  assert.equal(unformattedCheck.pass, false);
+  assert.match(unformattedCheck.actual, /1块，0个编号要点/);
+});
+
 test("检查固定结构、结尾、标签数量与标签格式", () => {
   const chapters = `# 01 💡 实战落地
 
@@ -121,6 +162,10 @@ test("检查项与Markdown规范一致且不再要求配图和排版建议", () 
   );
 
   assert.equal(checks.get("tags"), "恰好8个唯一标签");
+  assert.equal(
+    checks.get("summary"),
+    "摘要220–280字；3块排版，中间为1.–3.连续编号要点",
+  );
   assert.equal(
     checks.get("structure"),
     "含#框架总览、2–15个#一级章节、每章1–3个##二级节点、实战落地和核心复盘；无伪分页信号",

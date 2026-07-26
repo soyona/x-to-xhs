@@ -76,11 +76,9 @@ function sectionContent(lines, name, followingNames) {
   const section = findSection(lines, name);
   if (!section) return "";
   const end = firstSectionIndex(lines, followingNames, section.index + 1);
-  return toXiaohongshuText(
-    [section.content, ...lines.slice(section.index + 1, end)]
-      .filter(Boolean)
-      .join("\n"),
-  );
+  const contentLines = lines.slice(section.index + 1, end);
+  if (section.content) contentLines.unshift(section.content);
+  return toXiaohongshuText(contentLines.join("\n"));
 }
 
 function descriptionFromBody(body) {

@@ -1,0 +1,16 @@
+# 1. 阻止 Codex 默认预加载的长 Prompt 及设计大文档（最关键）
+Long-form-post-prompt.md
+design-*.md
+
+# 2. 忽略构建产物与依赖（避免代码搜索噪音）
+node_modules/
+dist/
+build/
+.next/
+
+# 3. 忽略日志与本地数据库/快照
+*.log
+.env
+.env.*
+historyData/
+tests/__snapshots__/

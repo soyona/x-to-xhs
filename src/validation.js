@@ -35,7 +35,7 @@ export const validationGroups = [
     number: "3",
     label: "正文小结 / 摘要",
     items: [
-      { id: "summary", label: "摘要字数" },
+      { id: "summary", label: "摘要字数与排版" },
       { id: "description-limit", label: "发布描述" },
     ],
   },
@@ -190,6 +190,38 @@ function countListItems(value) {
   return (value.match(/(?:^|\n)\s*(?:[-*+]|\d+[.、）)])\s+/g) || []).length;
 }
 
+function inspectSummaryLayout(summary) {
+  const content = summary
+    .replace(sectionMatchers.summary, "")
+    .replace(/^#+\s*/u, "")
+    .trim();
+  const blocks = content
+    .split(/\n\s*\n/u)
+    .map((block) => block.trim())
+    .filter(Boolean);
+  const numberedLines =
+    blocks[1]
+      ?.split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean) || [];
+  const numberedItemsValid =
+    numberedLines.length === 3 &&
+    numberedLines.every((line, index) =>
+      new RegExp(`^${index + 1}\\.\\s+\\S`, "u").test(line),
+    );
+
+  return {
+    blockCount: blocks.length,
+    numberedItemCount: numberedLines.filter((line) =>
+      /^\d+\.\s+\S/u.test(line),
+    ).length,
+    valid:
+      blocks.length === 3 &&
+      numberedItemsValid &&
+      !/^#{1,3}\s+\S/mu.test(content),
+  };
+}
+
 function bodyText(markdown) {
   const title = extractTitle(markdown);
   const start = title ? markdown.indexOf(title) + title.length : 0;
@@ -288,6 +320,7 @@ export function validateDraft(markdown = "") {
   const summaryCount = countCharacters(
     summary.replace(sectionMatchers.summary, ""),
   );
+  const summaryLayout = inspectSummaryLayout(summary);
   const descriptionCount = countPlatformCharacters(
     summary
       .replace(sectionMatchers.summary, "")
@@ -383,9 +416,15 @@ export function validateDraft(markdown = "") {
     {
       id: "summary",
       label: "摘要",
-      requirement: "摘要220–280字",
-      actual: summary ? `${summaryCount}字` : "缺失",
-      pass: summaryCount >= 220 && summaryCount <= 280,
+      requirement:
+        "摘要220–280字；3块排版，中间为1.–3.连续编号要点",
+      actual: summary
+        ? `${summaryCount}字，${summaryLayout.blockCount}块，${summaryLayout.numberedItemCount}个编号要点`
+        : "缺失",
+      pass:
+        summaryCount >= 220 &&
+        summaryCount <= 280 &&
+        summaryLayout.valid,
     },
     {
       id: "description-limit",
@@ -446,6 +485,8 @@ export function validateDraft(markdown = "") {
       openingCount,
       practiceCount,
       summaryCount,
+      summaryBlockCount: summaryLayout.blockCount,
+      summaryNumberedItemCount: summaryLayout.numberedItemCount,
       descriptionCount,
       tagCount,
     },
