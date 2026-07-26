@@ -14,7 +14,13 @@ import {
   buildContentPreferencePrompt,
   normalizeContentPreferences,
 } from "./src/contentPreferences.js";
+import {
+  buildSectionGenerationPrompt,
+  parseSectionCandidates,
+  validateSectionCandidates,
+} from "./src/sectionGeneration.js";
 import { validateDraft } from "./src/validation.js";
+import { splitXiaohongshuDraft } from "./src/xiaohongshuPublish.js";
 
 const rootDir = fileURLToPath(new URL(".", import.meta.url));
 
@@ -457,6 +463,51 @@ async function repairDraft(payload) {
   }
 }
 
+async function generateSection(payload = {}) {
+  const {
+    section,
+    input,
+    draft,
+    currentValue,
+    previousCandidates,
+    rejectionReasons,
+    preferences,
+  } = payload;
+  if (!input?.trim()) throw new Error("缺少原始 X 内容，无法局部生成。");
+  if (!draft?.trim()) throw new Error("缺少当前草稿，无法局部生成。");
+
+  const source = await resolveSource(input);
+  const fields = splitXiaohongshuDraft(draft);
+  const prompt = buildSectionGenerationPrompt({
+    section,
+    sourceContent: source.content,
+    draft,
+    body: fields.body,
+    currentValue,
+    previousCandidates,
+    rejectionReasons,
+    preferences,
+  });
+  const result = await generateWithFallback({
+    prompt,
+    dispatcher: externalDispatcher,
+  });
+  const candidates = validateSectionCandidates(
+    section,
+    parseSectionCandidates(result.draft, section),
+    { draft },
+  );
+
+  return {
+    ...result,
+    draft: undefined,
+    section,
+    candidates,
+    sourceMode: "content-only",
+    sourceUpdatedAt: null,
+  };
+}
+
 async function handleApi(request, response) {
   const apiUrl = new URL(request.url, "http://local");
   const historyDetailMatch =
@@ -510,6 +561,17 @@ async function handleApi(request, response) {
 
   if (request.method === "POST" && apiUrl.pathname === "/api/repair") {
     return sendJson(response, 200, await repairDraft(await readJson(request)));
+  }
+
+  if (
+    request.method === "POST" &&
+    apiUrl.pathname === "/api/generate-section"
+  ) {
+    return sendJson(
+      response,
+      200,
+      await generateSection(await readJson(request)),
+    );
   }
 
   sendJson(response, 404, { error: "接口不存在。" });

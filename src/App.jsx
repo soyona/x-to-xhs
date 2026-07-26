@@ -11,6 +11,8 @@ import { MarkdownPreview } from "./MarkdownPreview";
 import { PublishWorkflow } from "./PublishWorkflow";
 import { getRepairStrategy } from "./repairStrategy";
 import { validateDraft, validationGroups } from "./validation";
+import { replaceWorkflowSection } from "./workflowDraft";
+import { splitXiaohongshuDraft } from "./xiaohongshuPublish";
 import {
   PROTOTYPE_DRAFT_FAILED,
   PROTOTYPE_DRAFT_PASSED,
@@ -63,6 +65,40 @@ function loadContentPreferences() {
   }
 }
 
+function prototypeSectionResult(section) {
+  const fields = splitXiaohongshuDraft(PROTOTYPE_DRAFT_PASSED);
+  const candidates = {
+    "longform-title": [
+      "焦虑救星🔥超全干货AI实战进阶指南🚀",
+      "效率翻倍🔥超全干货AI内容进阶指南🚀",
+      "别再硬翻🔥超全干货AI创作实战指南🚀",
+    ],
+    body: [
+      fields.body.replace(
+        "这份示例稿把任务拆成",
+        "新版本把完整任务进一步拆成",
+      ),
+    ],
+    "publish-title": [
+      "X内容别再硬翻了🔥",
+      "一套方法重构X长文🚀",
+      "把X观点写成好长文✨",
+    ],
+    description: [fields.description],
+    tags: [fields.tags],
+  }[section];
+  if (!candidates) throw new Error("不支持这个局部生成步骤。");
+  return {
+    section,
+    candidates,
+    provider: "prototype",
+    providerLabel: "本地交互稿",
+    model: "不调用模型",
+    sourceMode: "content-only",
+    sourceUpdatedAt: null,
+  };
+}
+
 export default function App() {
   const [input, setInput] = useState(prototypeMode ? PROTOTYPE_INPUT : "");
   const [draft, setDraft] = useState(
@@ -84,6 +120,8 @@ export default function App() {
   const [lastRepairProvider, setLastRepairProvider] = useState("");
   const [draftHistory, setDraftHistory] = useState([]);
   const [repairScope, setRepairScope] = useState(null);
+  const [workflowId, setWorkflowId] = useState(prototypeMode ? 1 : 0);
+  const [autoGenerateTitles, setAutoGenerateTitles] = useState(prototypeMode);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [activeHistory, setActiveHistory] = useState(null);
@@ -149,6 +187,8 @@ export default function App() {
           : null,
       );
       setHistoryNotice(getHistoryNotice(result));
+      setAutoGenerateTitles(true);
+      setWorkflowId((current) => current + 1);
       setStatus("done");
     } catch (generationError) {
       setError(generationError.message);
@@ -249,6 +289,8 @@ export default function App() {
       setHistoryNotice(getHistoryNotice(result));
       setLastRepairProvider(result.provider);
       setRepairAttempts((attempts) => attempts + 1);
+      setAutoGenerateTitles(true);
+      setWorkflowId((current) => current + 1);
       setStatus("done");
       setRepairScope(null);
     } catch (repairError) {
@@ -266,6 +308,45 @@ export default function App() {
     setError("");
     setStatus("done");
     setRepairScope(null);
+    setAutoGenerateTitles(false);
+    setWorkflowId((current) => current + 1);
+  }
+
+  async function generateWorkflowSection({
+    section,
+    currentValue,
+    previousCandidates = [],
+    rejectionReasons = [],
+  }) {
+    if (!draft || isWorking) {
+      throw new Error("当前整稿处理中，请稍后再试。");
+    }
+    if (prototypeMode) {
+      return new Promise((resolve) => {
+        window.setTimeout(() => resolve(prototypeSectionResult(section)), 520);
+      });
+    }
+    return postJson("/api/generate-section", {
+      section,
+      input,
+      draft,
+      currentValue,
+      previousCandidates,
+      rejectionReasons,
+      preferences: contentPreferences,
+    });
+  }
+
+  function applyWorkflowSection(section, value) {
+    const nextDraft = replaceWorkflowSection(draft, section, value);
+    if (nextDraft === draft) return;
+    if (section === "body") {
+      setDraftHistory((history) =>
+        [...history, { draft, generation }].slice(-2),
+      );
+    }
+    setDraft(nextDraft);
+    setError("");
   }
 
   function loadHistory({ record, version }) {
@@ -299,6 +380,8 @@ export default function App() {
     );
     setError("");
     setStatus("done");
+    setAutoGenerateTitles(false);
+    setWorkflowId((current) => current + 1);
     setHistoryOpen(false);
   }
 
@@ -499,6 +582,10 @@ export default function App() {
                   repairError={draft ? error : ""}
                   onRepair={repair}
                   onRestore={restorePreviousDraft}
+                  workflowId={workflowId}
+                  autoGenerateTitles={autoGenerateTitles}
+                  onGenerateSection={generateWorkflowSection}
+                  onApplySection={applyWorkflowSection}
                 />
               ) : (
                 <MarkdownPreview markdown="" />
