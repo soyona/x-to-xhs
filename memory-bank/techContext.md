@@ -10,7 +10,7 @@
 | HTTP / 代理 | 原生 `fetch`、Undici `ProxyAgent` |
 | 测试 | Node.js 内置 `node:test`、`node:assert/strict` |
 | 样式 | 单文件原生 CSS |
-| 持久化 | 本地 `.env` + `.local-data/history.json`，无数据库 |
+| 持久化 | 本地 `.env` + `.local-data/history.json` + `.local-data/prompts.json`，无数据库 |
 
 要求 Node.js 20.18 或更高版本。
 
@@ -28,6 +28,8 @@ npm run dev
 
 开发脚本以 Node watch 模式运行本地服务；服务端代码及其依赖变化后会自动
 重启，避免页面热更新与 API 版本不一致。
+监听清单必须只包含现存的服务端依赖；当前包含提示词存储、内容偏好、
+局部生成及小红书文本拆分模块，不再监听已删除的 `src/validation.js`。
 
 Vite 将 `/api` 代理到 8787。
 
@@ -73,22 +75,23 @@ npm start
 |---|---|---|
 | GET | `/api/health` | 返回供应商、模型和是否配置；绝不返回 Key |
 | POST | `/api/settings` | 保存/保留/清除 Key，更新模型 |
+| GET | `/api/prompts` | 返回系统默认、自定义方案和当前选中方案 |
+| POST | `/api/prompts` | 保存、切换或删除自定义提示词方案 |
 | GET | `/api/history` | 最近更新时间倒序返回历史列表 |
 | GET | `/api/history/:id` | 返回一条历史详情和最近 3 个版本 |
 | DELETE | `/api/history/:id` | 删除一条历史及其全部版本 |
 | POST | `/api/resolve` | 将 X URL 解析为正文 |
 | POST | `/api/generate` | 组装提示词并生成草稿 |
-| POST | `/api/repair` | 按失败项修复、修订或重生草稿 |
+| POST | `/api/generate-section` | 按当前提示词方案重新生成指定内容模块 |
 
-请求体上限为 64 KiB。
+请求体上限为 256 KiB。
 
-`/api/generate` 和 `/api/repair` 可携带 `preferences`。服务端仅接受
+`/api/generate` 和 `/api/generate-section` 可携带 `preferences`。服务端仅接受
 `src/contentPreferences.js` 声明的枚举值，并限制自由文本长度；偏好不写入
 `.env`，由浏览器本地存储持久化。
 
-生成接口成功保存历史后返回 `historyId` 和 `historyVersion`；修复接口携带
-这两个字段进行乐观版本检查并追加版本。历史保存失败不会吞掉已经生成的草稿，
-而是返回 `historyWarning` 供页面明确提示。
+生成接口成功保存历史后返回 `historyId` 和 `historyVersion`。历史保存失败不会
+吞掉已经生成的草稿，而是返回 `historyWarning` 供页面明确提示。
 
 历史文件写入采用同目录临时文件和原子重命名，主文件替换前保存最近的有效备份；
 目录权限为 `700`，JSON 与备份权限为 `600`。

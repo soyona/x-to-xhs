@@ -65,20 +65,19 @@ function sourceExcerpt(content) {
   return content.replace(/\s+/gu, " ").trim().slice(0, 100);
 }
 
-function validationSummary(validation = {}) {
-  const checks = Array.isArray(validation.checks) ? validation.checks : [];
-  return {
-    passed: checks.filter((check) => check.pass).length,
-    total: checks.length,
-    valid: validation.valid === true,
-  };
-}
-
 function generationSummary(generation = {}) {
   return {
     provider: cleanOptionalText(generation.provider, 100),
     providerLabel: cleanOptionalText(generation.providerLabel, 100),
     model: cleanOptionalText(generation.model, 200),
+  };
+}
+
+function promptProfileSummary(promptProfile = {}) {
+  return {
+    id: cleanOptionalText(promptProfile.id, 100),
+    name: cleanOptionalText(promptProfile.name, 100),
+    updatedAt: cleanOptionalText(promptProfile.updatedAt, 100),
   };
 }
 
@@ -91,7 +90,7 @@ function listItem(record) {
     sourceExcerpt: record.source?.excerpt || "",
     currentVersion: record.currentVersion,
     generation: record.generation,
-    validation: record.validation,
+    promptProfile: record.promptProfile || null,
   };
 }
 
@@ -209,7 +208,7 @@ export function createHistoryStore({
     draft,
     preferences,
     generation,
-    validation,
+    promptProfile,
   }) {
     return enqueueWrite(async () => {
       const document = await readDocument();
@@ -228,7 +227,7 @@ export function createHistoryStore({
       );
       const id = randomUUID();
       const summary = generationSummary(generation);
-      const summaryValidation = validationSummary(validation);
+      const summaryPromptProfile = promptProfileSummary(promptProfile);
       const record = {
         id,
         createdAt: timestamp,
@@ -243,14 +242,14 @@ export function createHistoryStore({
         currentVersion: 1,
         preferences: clone(preferences || {}),
         generation: summary,
-        validation: summaryValidation,
+        promptProfile: summaryPromptProfile,
         versions: [
           {
             version: 1,
             type: "generate",
             createdAt: timestamp,
             draft: cleanDraft,
-            validation: summaryValidation,
+            promptProfile: summaryPromptProfile,
             ...summary,
           },
         ],
@@ -269,8 +268,7 @@ export function createHistoryStore({
       expectedVersion,
       draft,
       generation,
-      validation,
-      type = "repair",
+      type = "update",
     },
   ) {
     if (!UUID_PATTERN.test(id || "")) throw new Error("历史记录 ID 无效。");
@@ -282,20 +280,18 @@ export function createHistoryStore({
         expectedVersion != null &&
         Number(expectedVersion) !== record.currentVersion
       ) {
-        throw new Error("这条历史笔记已有更新，请重新载入后再修复。");
+        throw new Error("这条历史笔记已有更新，请重新载入后再保存。");
       }
 
       const timestamp = now().toISOString();
       const cleanDraft = cleanText(draft, "长文草稿", 100_000);
       const summary = generationSummary(generation);
-      const summaryValidation = validationSummary(validation);
       const versionNumber = record.currentVersion + 1;
       record.versions.push({
         version: versionNumber,
         type,
         createdAt: timestamp,
         draft: cleanDraft,
-        validation: summaryValidation,
         ...summary,
       });
       record.versions = record.versions.slice(-maxVersions);
@@ -303,7 +299,6 @@ export function createHistoryStore({
       record.updatedAt = timestamp;
       record.title = titleFromDraft(cleanDraft);
       record.generation = summary;
-      record.validation = summaryValidation;
       document.updatedAt = timestamp;
 
       await writeDocument(document);

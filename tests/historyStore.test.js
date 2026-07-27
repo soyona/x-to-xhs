@@ -13,26 +13,16 @@ function generation(provider = "gemini") {
   };
 }
 
-function validation(passed = 11, total = 11) {
-  return {
-    valid: passed === total,
-    checks: Array.from({ length: total }, (_, index) => ({
-      pass: index < passed,
-    })),
-  };
-}
-
 function recordInput(title, source = "原始 X 内容") {
   return {
     source: { content: source, sourceUrl: null },
     draft: `# ${title}\n\n正文`,
     preferences: { audience: "intermediate", tone: "warm" },
     generation: generation(),
-    validation: validation(),
   };
 }
 
-test("历史记录按最近更新时间倒序，修复追加版本并只保留最近三版", async (t) => {
+test("历史记录按最近更新时间倒序，内容更新追加版本并只保留最近三版", async (t) => {
   const dataDir = await mkdtemp(join(tmpdir(), "x-to-xhs-history-"));
   t.after(() => rm(dataDir, { recursive: true, force: true }));
   const timestamps = [
@@ -51,21 +41,18 @@ test("历史记录按最近更新时间倒序，修复追加版本并只保留�
   const second = await store.create(recordInput("第二篇"));
   await store.appendVersion(first.id, {
     expectedVersion: 1,
-    draft: "# 第一篇修复一\n\n正文",
+    draft: "# 第一篇更新一\n\n正文",
     generation: generation("groq"),
-    validation: validation(10),
   });
   await store.appendVersion(first.id, {
     expectedVersion: 2,
-    draft: "# 第一篇修复二\n\n正文",
+    draft: "# 第一篇更新二\n\n正文",
     generation: generation(),
-    validation: validation(),
   });
   const latest = await store.appendVersion(first.id, {
     expectedVersion: 3,
     draft: "# 第一篇最终版\n\n正文",
     generation: generation(),
-    validation: validation(),
   });
 
   const list = await store.list();
@@ -79,8 +66,6 @@ test("历史记录按最近更新时间倒序，修复追加版本并只保留�
     [2, 3, 4],
   );
   assert.equal(latest.title, "第一篇最终版");
-  assert.equal(latest.validation.valid, true);
-  assert.equal(latest.versions.at(-1).validation.valid, true);
 
   const mode = (await stat(store.filePath)).mode & 0o777;
   const directoryMode = (await stat(dataDir)).mode & 0o777;
@@ -109,7 +94,6 @@ test("历史记录执行版本冲突检查、容量限制和删除", async (t) =
       expectedVersion: 9,
       draft: "# 冲突版本\n\n正文",
       generation: generation(),
-      validation: validation(),
     }),
     /已有更新/,
   );
@@ -136,7 +120,6 @@ test("主历史文件损坏时从最近的有效备份读取且不覆盖原文�
     expectedVersion: 1,
     draft: "# 备份测试第二版\n\n正文",
     generation: generation(),
-    validation: validation(),
   });
   await writeFile(store.filePath, "{not-json", "utf8");
 

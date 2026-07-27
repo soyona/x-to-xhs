@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertIcon,
-  ArrowIcon,
   CheckIcon,
   CopyIcon,
   DownloadIcon,
@@ -11,8 +10,6 @@ import {
   buildMarkdownBody,
   buildMarkdownFilename,
 } from "./markdownExport";
-import { MAX_REPAIR_ATTEMPTS } from "./repairStrategy";
-import { validationGroups } from "./validation";
 import {
   countPlatformCharacters,
   splitXiaohongshuDraft,
@@ -21,143 +18,6 @@ import {
   toXiaohongshuPlainText,
   toXiaohongshuRichHtml,
 } from "./xiaohongshuText";
-
-const checkLabels = new Map(
-  validationGroups.flatMap((group) =>
-    group.items.map((item) => [item.id, item.label]),
-  ),
-);
-
-function statusCopy(checks, isRepairing, hasError) {
-  const failedCount = checks.filter((check) => !check.pass).length;
-  if (isRepairing) return "正在修复";
-  if (hasError) return "修复失败";
-  if (failedCount) return `${failedCount} 项需要修复`;
-  return `${checks.length} 项检查通过`;
-}
-
-function InlineChecks({
-  title,
-  scopeId,
-  checkIds,
-  validationMap,
-  attempts,
-  isRepairing,
-  repairScope,
-  repairError,
-  onRepair,
-}) {
-  const checks = checkIds
-    .map((id) => validationMap.get(id))
-    .filter(Boolean);
-  const failedChecks = checks.filter((check) => !check.pass);
-  const scopeIsRepairing = isRepairing && repairScope?.id === scopeId;
-  const scopeHasError = Boolean(
-    repairError && repairScope?.id === scopeId && !isRepairing,
-  );
-  const [expanded, setExpanded] = useState(failedChecks.length > 0);
-
-  useEffect(() => {
-    setExpanded(failedChecks.length > 0 || scopeHasError);
-  }, [failedChecks.length, scopeHasError]);
-
-  if (!checks.length) return null;
-
-  const state = scopeIsRepairing
-    ? "working"
-    : scopeHasError
-      ? "error"
-      : failedChecks.length
-        ? "fail"
-        : "pass";
-  const canRepair =
-    failedChecks.length > 0 &&
-    attempts < MAX_REPAIR_ATTEMPTS &&
-    !isRepairing;
-
-  return (
-    <div className={`inline-checks ${state}`} aria-live="polite">
-      <button
-        className="inline-checks-toggle"
-        type="button"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((current) => !current)}
-      >
-        <span className="inline-checks-icon">
-          {state === "pass" ? <CheckIcon /> : <AlertIcon />}
-        </span>
-        <span className="inline-checks-title">{title}</span>
-        <strong>{statusCopy(checks, scopeIsRepairing, scopeHasError)}</strong>
-        <span className="inline-checks-disclosure" aria-hidden="true">
-          {expanded ? "收起" : "查看规范"}
-        </span>
-      </button>
-
-      {expanded && (
-        <div className="inline-checks-detail">
-          {scopeHasError && (
-            <div className="inline-repair-error" role="alert">
-              {repairError}
-            </div>
-          )}
-
-          <div className="inline-check-list">
-            {checks.map((check) => (
-              <div
-                className={`inline-check-row ${check.pass ? "pass" : "fail"}`}
-                key={check.id}
-              >
-                <span>{check.pass ? <CheckIcon /> : <AlertIcon />}</span>
-                <div>
-                  <strong>{checkLabels.get(check.id) || check.label}</strong>
-                  <p>
-                    当前：{check.actual}；要求：{check.requirement}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {failedChecks.length > 0 && (
-            <div className="inline-repair-action">
-              <div>
-                <strong>
-                  {attempts >= MAX_REPAIR_ATTEMPTS
-                    ? "已达到两次自动处理上限"
-                    : "重点修复当前问题，并重新检查整稿"}
-                </strong>
-                <p>
-                  {attempts >= MAX_REPAIR_ATTEMPTS
-                    ? "请人工确认剩余问题，或恢复上一版本后再调整。"
-                    : "其他已通过内容会作为保留条件提交给模型。"}
-                </p>
-              </div>
-              <button
-                className="inline-repair-button"
-                type="button"
-                disabled={!canRepair}
-                onClick={() =>
-                  onRepair({
-                    id: scopeId,
-                    label: title,
-                    checkIds,
-                  })
-                }
-              >
-                {scopeIsRepairing ? (
-                  <span className="spinner" aria-hidden="true" />
-                ) : (
-                  <ArrowIcon />
-                )}
-                {scopeIsRepairing ? "正在修复…" : "修复此部分"}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 const emptySectionGeneration = {
   status: "idle",
@@ -409,71 +269,25 @@ function ActionStep({ number, title, description, children }) {
   );
 }
 
-function WorkflowSummary({
-  validation,
-  attempts,
-  historyCount,
-  isRepairing,
-  repairScope,
-  repairError,
-  onRepair,
-  onRestore,
-}) {
-  const failedChecks = validation.checks.filter((check) => !check.pass);
-  const passedCount = validation.checks.length - failedChecks.length;
-
+function WorkflowSummary({ historyCount, onRestore }) {
   return (
-    <div
-      className={`workflow-summary ${
-        validation.valid ? "pass" : "needs-attention"
-      }`}
-      aria-live="polite"
-    >
+    <div className="workflow-summary pass" aria-live="polite">
       <div className="workflow-summary-copy">
         <span className="workflow-summary-icon">
-          {validation.valid ? <CheckIcon /> : <AlertIcon />}
+          <CheckIcon />
         </span>
         <div>
-          <strong>
-            {validation.valid
-              ? "自动规范已全部通过"
-              : `${failedChecks.length} 项需要修复`}
-          </strong>
+          <strong>内容已生成，可按需要选择或重新生成</strong>
           <p>
-            {passedCount}/{validation.checks.length} 项自动检查通过
-            {validation.valid
-              ? " · 可以继续按步骤发布"
-              : " · 修复后会重新检查整稿"}
+            内容质量由当前提示词方案控制，系统不再执行内容规则判定。
           </p>
-          {repairError && repairScope?.id === "all" && (
-            <small role="alert">{repairError}</small>
-          )}
         </div>
       </div>
       <div className="workflow-summary-actions">
-        {!validation.valid && attempts < MAX_REPAIR_ATTEMPTS && (
-          <button
-            className="summary-repair-button"
-            type="button"
-            disabled={isRepairing}
-            onClick={() =>
-              onRepair({
-                id: "all",
-                label: "全部未通过项目",
-                checkIds: failedChecks.map((check) => check.id),
-              })
-            }
-          >
-            {isRepairing && repairScope?.id === "all"
-              ? "正在修复…"
-              : "修复全部问题"}
-          </button>
-        )}
         {historyCount > 0 && (
           <button
             className="summary-restore-button"
             type="button"
-            disabled={isRepairing}
             onClick={onRestore}
           >
             恢复上一版本
@@ -486,13 +300,7 @@ function WorkflowSummary({
 
 export function PublishWorkflow({
   draft,
-  validation,
-  attempts,
   historyCount,
-  isRepairing,
-  repairScope,
-  repairError,
-  onRepair,
   onRestore,
   workflowId,
   autoGenerateTitles,
@@ -500,10 +308,6 @@ export function PublishWorkflow({
   onApplySection,
 }) {
   const fields = useMemo(() => splitXiaohongshuDraft(draft), [draft]);
-  const validationMap = useMemo(
-    () => new Map(validation.checks.map((check) => [check.id, check])),
-    [validation],
-  );
   const [copiedStep, setCopiedStep] = useState("");
   const [exportStatus, setExportStatus] = useState("");
   const [publishTitle, setPublishTitle] = useState(fields.publishTitle);
@@ -683,7 +487,7 @@ export function PublishWorkflow({
           error={generationState.error}
           sourceMode={generationState.sourceMode}
           sourceUpdatedAt={generationState.sourceUpdatedAt}
-          disabled={isRepairing}
+          disabled={false}
           onSelect={(candidate) => selectCandidate(section, candidate)}
         />
       ),
@@ -693,7 +497,7 @@ export function PublishWorkflow({
           type="button"
           title={isGenerating ? "正在生成…" : regenerateLabel}
           aria-label={isGenerating ? "正在生成…" : regenerateLabel}
-          disabled={isGenerating || isRepairing}
+          disabled={isGenerating}
           onClick={() => regenerateSection(section)}
         >
           {isGenerating ? (
@@ -737,7 +541,7 @@ export function PublishWorkflow({
   }
 
   function exportMarkdownBody() {
-    if (!fields.body || isRepairing) return;
+    if (!fields.body) return;
 
     try {
       const blob = new Blob([buildMarkdownBody(fields.body)], {
@@ -764,32 +568,17 @@ export function PublishWorkflow({
     }
   }
 
-  const inlineCheckProps = {
-    validationMap,
-    attempts,
-    isRepairing,
-    repairScope,
-    repairError,
-    onRepair,
-  };
-
   return (
     <div className="publish-workflow">
       <WorkflowSummary
-        validation={validation}
-        attempts={attempts}
         historyCount={historyCount}
-        isRepairing={isRepairing}
-        repairScope={repairScope}
-        repairError={repairError}
-        onRepair={onRepair}
         onRestore={onRestore}
       />
 
       <div className="workflow-intro">
-        <strong>按发布流程分段复制，检查结果已放回对应内容</strong>
+        <strong>按发布流程分段复制，不满意可重新生成对应内容</strong>
         <p>
-          复制正文时优先转换为富文本，平台不支持时自动使用无井号纯文本；修复后会重新检查整份草稿。
+          复制正文时优先转换为富文本，平台不支持时自动使用无井号纯文本。
         </p>
       </div>
 
@@ -807,15 +596,8 @@ export function PublishWorkflow({
           "longform-title",
           fields.longformTitle,
         )}
-        disabled={isRepairing}
-      >
-        <InlineChecks
-          {...inlineCheckProps}
-          title="标题规范"
-          scopeId="longform-title"
-          checkIds={["title"]}
-        />
-      </CopyStep>
+        disabled={false}
+      />
 
       <CopyStep
         number="02"
@@ -830,24 +612,10 @@ export function PublishWorkflow({
         exportStatus={exportStatus}
         onExport={exportMarkdownBody}
         generationControls={generationControls("body", fields.body)}
-        disabled={isRepairing}
+        disabled={false}
         previewSize="body"
         expandable
-      >
-        <InlineChecks
-          {...inlineCheckProps}
-          title="正文与整稿规范"
-          scopeId="body"
-          checkIds={[
-            "body",
-            "opening",
-            "structure",
-            "practice",
-            "fixed-format",
-            "review",
-          ]}
-        />
-      </CopyStep>
+      />
 
       <ActionStep
         number="03"
@@ -870,7 +638,7 @@ export function PublishWorkflow({
           publishTitle,
         )}
         stale={sectionBodyVersions["publish-title"] < bodyVersion}
-        disabled={isRepairing}
+        disabled={false}
       />
 
       <CopyStep
@@ -893,15 +661,8 @@ export function PublishWorkflow({
           fields.description,
         )}
         stale={sectionBodyVersions.description < bodyVersion}
-        disabled={isRepairing}
-      >
-        <InlineChecks
-          {...inlineCheckProps}
-          title="摘要与发布描述"
-          scopeId="description"
-          checkIds={["summary", "description-limit"]}
-        />
-      </CopyStep>
+        disabled={false}
+      />
 
       <CopyStep
         number="06"
@@ -918,19 +679,12 @@ export function PublishWorkflow({
         copyLabel="复制标签"
         generationControls={generationControls("tags", fields.tags)}
         stale={sectionBodyVersions.tags < bodyVersion}
-        disabled={isRepairing}
-      >
-        <InlineChecks
-          {...inlineCheckProps}
-          title="标签规范"
-          scopeId="tags"
-          checkIds={["tags", "tag-format"]}
-        />
-      </CopyStep>
+        disabled={false}
+      />
 
       <ActionStep
         number="07"
-        title="检查并发布"
+        title="预览并发布"
         description={
           Object.entries(sectionBodyVersions).some(
             ([, version]) => version < bodyVersion,

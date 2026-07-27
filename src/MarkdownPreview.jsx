@@ -31,7 +31,7 @@ const EMPTY_WORKFLOW_STAGES = [
     Icon: ClipboardList,
   },
   {
-    title: "检查并发布",
+    title: "预览并发布",
     description: "复核内容后手动发布",
     Icon: Send,
   },
@@ -44,7 +44,7 @@ const EMPTY_PUBLISHING_STEPS = [
   { number: "04", label: "发布标题", Icon: Pilcrow },
   { number: "05", label: "正文描述", Icon: ListTree },
   { number: "06", label: "标签", Icon: Tags },
-  { number: "07", label: "检查并发布", Icon: BadgeCheck },
+  { number: "07", label: "预览并发布", Icon: BadgeCheck },
 ];
 
 function EmptyWorkflowGuide() {

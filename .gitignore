@@ -4,4 +4,3 @@ dist/
 .local-data/
 .DS_Store
 npm-debug.log*
-Long-form-post-prompt.md

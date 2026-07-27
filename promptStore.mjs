@@ -1,0 +1,288 @@
+import { randomUUID } from "node:crypto";
+import {
+  chmod,
+  mkdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
+import { join } from "node:path";
+
+export const PROMPT_MODULE_IDS = [
+  "global",
+  "title",
+  "body",
+  "summary",
+  "tags",
+  "output",
+];
+export const EDITABLE_PROMPT_MODULE_IDS = [
+  "global",
+  "title",
+  "body",
+  "summary",
+  "tags",
+];
+
+const SCHEMA_VERSION = 1;
+const DEFAULT_PROFILE_ID = "default";
+const PROFILE_ID_PATTERN = /^[a-z0-9-]{1,80}$/u;
+const MARKER_PATTERN =
+  /<!--\s*PROMPT:([A-Z]+):START\s*-->([\s\S]*?)<!--\s*PROMPT:\1:END\s*-->/gu;
+
+function emptyDocument() {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    selectedId: DEFAULT_PROFILE_ID,
+    profiles: [],
+  };
+}
+
+function cleanText(value, label, max = 20_000) {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${label}不能为空。`);
+  }
+  const cleaned = value.trim();
+  if (cleaned.length > max) throw new Error(`${label}内容过长。`);
+  return cleaned;
+}
+
+function cleanName(value) {
+  const cleaned = cleanText(value, "方案名称", 40);
+  if (/[\r\n]/u.test(cleaned)) throw new Error("方案名称不能包含换行。");
+  return cleaned;
+}
+
+function cleanEditableModules(modules = {}) {
+  if (!modules || typeof modules !== "object") {
+    throw new Error("提示词模块格式无效。");
+  }
+  return Object.fromEntries(
+    EDITABLE_PROMPT_MODULE_IDS.map((id) => [
+      id,
+      cleanText(modules[id], `${id} 模块`),
+    ]),
+  );
+}
+
+function validateDocument(value) {
+  if (
+    !value ||
+    value.schemaVersion !== SCHEMA_VERSION ||
+    !Array.isArray(value.profiles) ||
+    typeof value.selectedId !== "string"
+  ) {
+    throw new Error("提示词方案文件格式无效。");
+  }
+  return value;
+}
+
+export function parsePromptModules(markdown = "") {
+  const modules = {};
+  for (const match of markdown.matchAll(MARKER_PATTERN)) {
+    modules[match[1].toLowerCase()] = match[2].trim();
+  }
+  const missing = PROMPT_MODULE_IDS.filter((id) => !modules[id]);
+  if (missing.length) {
+    throw new Error(`默认提示词缺少模块：${missing.join("、")}。`);
+  }
+  return modules;
+}
+
+function profileSummary(profile, defaultModules) {
+  return {
+    id: profile.id,
+    name: profile.name,
+    source: "custom",
+    modules: structuredClone({
+      ...defaultModules,
+      ...profile.modules,
+    }),
+    createdAt: profile.createdAt,
+    updatedAt: profile.updatedAt,
+  };
+}
+
+export function createPromptStore({ rootDir, dataDir, now = () => new Date() }) {
+  if (!rootDir || !dataDir) throw new Error("缺少提示词存储目录。");
+  const defaultPath = join(rootDir, "Long-form-post-prompt.md");
+  const filePath = join(dataDir, "prompts.json");
+  let writeQueue = Promise.resolve();
+
+  async function readDefaultProfile() {
+    const [markdown, fileStat] = await Promise.all([
+      readFile(defaultPath, "utf8"),
+      stat(defaultPath),
+    ]);
+    const modules = parsePromptModules(markdown);
+    return {
+      id: DEFAULT_PROFILE_ID,
+      name: "系统默认",
+      source: "default",
+      modules: Object.fromEntries(
+        EDITABLE_PROMPT_MODULE_IDS.map((id) => [id, modules[id]]),
+      ),
+      protectedModules: { output: modules.output },
+      updatedAt: fileStat.mtime.toISOString(),
+    };
+  }
+
+  async function readDocument() {
+    try {
+      return validateDocument(JSON.parse(await readFile(filePath, "utf8")));
+    } catch (error) {
+      if (error?.code === "ENOENT") return emptyDocument();
+      if (error?.name === "SyntaxError") {
+        throw new Error("提示词方案文件无法解析，原文件已保留。");
+      }
+      throw error;
+    }
+  }
+
+  async function writeDocument(document) {
+    await mkdir(dataDir, { recursive: true, mode: 0o700 });
+    await chmod(dataDir, 0o700);
+    const temporaryPath = join(
+      dataDir,
+      `prompts.json.tmp-${process.pid}-${Date.now()}`,
+    );
+    try {
+      await writeFile(
+        temporaryPath,
+        `${JSON.stringify(document, null, 2)}\n`,
+        { encoding: "utf8", mode: 0o600 },
+      );
+      validateDocument(JSON.parse(await readFile(temporaryPath, "utf8")));
+      await rename(temporaryPath, filePath);
+      await chmod(filePath, 0o600);
+    } finally {
+      await rm(temporaryPath, { force: true });
+    }
+  }
+
+  function enqueueWrite(task) {
+    const result = writeQueue.then(task, task);
+    writeQueue = result.catch(() => undefined);
+    return result;
+  }
+
+  async function getState() {
+    await writeQueue;
+    const [defaultProfile, document] = await Promise.all([
+      readDefaultProfile(),
+      readDocument(),
+    ]);
+    const selectedExists =
+      document.selectedId === DEFAULT_PROFILE_ID ||
+      document.profiles.some((profile) => profile.id === document.selectedId);
+    return {
+      selectedId: selectedExists ? document.selectedId : DEFAULT_PROFILE_ID,
+      defaultProfile: {
+        id: defaultProfile.id,
+        name: defaultProfile.name,
+        source: defaultProfile.source,
+        modules: defaultProfile.modules,
+        updatedAt: defaultProfile.updatedAt,
+      },
+      profiles: document.profiles.map((profile) =>
+        profileSummary(profile, defaultProfile.modules),
+      ),
+    };
+  }
+
+  async function getEffectiveProfile() {
+    await writeQueue;
+    const [defaultProfile, document] = await Promise.all([
+      readDefaultProfile(),
+      readDocument(),
+    ]);
+    const selected = document.profiles.find(
+      (profile) => profile.id === document.selectedId,
+    );
+    return {
+      id: selected?.id || DEFAULT_PROFILE_ID,
+      name: selected?.name || defaultProfile.name,
+      updatedAt: selected?.updatedAt || defaultProfile.updatedAt,
+      modules: {
+        ...defaultProfile.modules,
+        ...(selected?.modules || {}),
+        output: defaultProfile.protectedModules.output,
+      },
+    };
+  }
+
+  async function saveProfile({ id, name, modules }) {
+    await enqueueWrite(async () => {
+      const document = await readDocument();
+      const timestamp = now().toISOString();
+      const cleanedModules = cleanEditableModules(modules);
+      const cleanedName = cleanName(name);
+      let profile = id
+        ? document.profiles.find((item) => item.id === id)
+        : null;
+      if (id && (!PROFILE_ID_PATTERN.test(id) || !profile)) {
+        throw new Error("提示词方案不存在或 ID 无效。");
+      }
+      if (profile) {
+        profile.name = cleanedName;
+        profile.modules = cleanedModules;
+        profile.updatedAt = timestamp;
+      } else {
+        profile = {
+          id: randomUUID(),
+          name: cleanedName,
+          modules: cleanedModules,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        };
+        document.profiles.push(profile);
+      }
+      document.selectedId = profile.id;
+      await writeDocument(document);
+    });
+    return getState();
+  }
+
+  async function selectProfile(id) {
+    await enqueueWrite(async () => {
+      const document = await readDocument();
+      const valid =
+        id === DEFAULT_PROFILE_ID ||
+        (PROFILE_ID_PATTERN.test(id || "") &&
+          document.profiles.some((profile) => profile.id === id));
+      if (!valid) throw new Error("提示词方案不存在。");
+      document.selectedId = id;
+      await writeDocument(document);
+    });
+    return getState();
+  }
+
+  async function deleteProfile(id) {
+    await enqueueWrite(async () => {
+      if (!PROFILE_ID_PATTERN.test(id || "") || id === DEFAULT_PROFILE_ID) {
+        throw new Error("不能删除系统默认方案。");
+      }
+      const document = await readDocument();
+      const nextProfiles = document.profiles.filter(
+        (profile) => profile.id !== id,
+      );
+      if (nextProfiles.length === document.profiles.length) {
+        throw new Error("提示词方案不存在。");
+      }
+      document.profiles = nextProfiles;
+      if (document.selectedId === id) document.selectedId = DEFAULT_PROFILE_ID;
+      await writeDocument(document);
+    });
+    return getState();
+  }
+
+  return {
+    getState,
+    getEffectiveProfile,
+    saveProfile,
+    selectProfile,
+    deleteProfile,
+  };
+}

@@ -108,10 +108,10 @@ test("Gemini 限流后自动切换到 Groq Qwen", async () => {
   assert.match(calls[1], /api\.groq\.com/);
 });
 
-test("第二次修复可跳过上一次成功的模型", async () => {
+test("调用方可以指定跳过某个模型", async () => {
   const calls = [];
   const result = await generateWithFallback({
-    prompt: "修复提示词",
+    prompt: "重新生成提示词",
     env: {
       GEMINI_API_KEY: "gemini-key",
       GROQ_API_KEY: "groq-key",
@@ -124,7 +124,7 @@ test("第二次修复可跳过上一次成功的模型", async () => {
       calls.push(url);
       return jsonResponse({
         model: "qwen/qwen3.6-27b",
-        choices: [{ message: { content: "# Groq 修复稿" } }],
+        choices: [{ message: { content: "# Groq 生成稿" } }],
       });
     },
   });

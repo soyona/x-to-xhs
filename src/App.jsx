@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiSettingsDialog } from "./ApiSettingsDialog";
 import {
   CONTENT_PREFERENCE_STORAGE_KEY,
@@ -10,24 +10,12 @@ import { AlertIcon, ArrowIcon } from "./icons";
 import { HistoryDialog } from "./HistoryDialog";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { PublishWorkflow } from "./PublishWorkflow";
-import { getRepairStrategy } from "./repairStrategy";
-import { validateDraft, validationGroups } from "./validation";
 import { replaceWorkflowSection } from "./workflowDraft";
 import { splitXiaohongshuDraft } from "./xiaohongshuPublish";
 import {
-  PROTOTYPE_DRAFT_FAILED,
   PROTOTYPE_DRAFT_PASSED,
   PROTOTYPE_INPUT,
 } from "./prototypeDraft";
-
-const repairCheckLabels = new Map(
-  validationGroups.flatMap((group) =>
-    group.items.map((item) => [
-      item.id,
-      `${group.label} / ${item.label}`,
-    ]),
-  ),
-);
 
 async function postJson(path, body) {
   const response = await fetch(path, {
@@ -70,9 +58,9 @@ function prototypeSectionResult(section) {
   const fields = splitXiaohongshuDraft(PROTOTYPE_DRAFT_PASSED);
   const candidates = {
     "longform-title": [
-      "焦虑救星🔥超全干货AI实战进阶指南🚀",
-      "效率翻倍🔥超全干货AI内容进阶指南🚀",
-      "别再硬翻🔥超全干货AI创作实战指南🚀",
+      "🔥AI写作总卡壳超全干货带你破局",
+      "💡别再硬翻X内容超全干货重构指南",
+      "📌X内容创作超全干货系统进阶指南",
     ],
     body: [
       fields.body.replace(
@@ -103,7 +91,7 @@ function prototypeSectionResult(section) {
 export default function App() {
   const [input, setInput] = useState(prototypeMode ? PROTOTYPE_INPUT : "");
   const [draft, setDraft] = useState(
-    prototypeMode ? PROTOTYPE_DRAFT_FAILED : "",
+    prototypeMode ? PROTOTYPE_DRAFT_PASSED : "",
   );
   const [status, setStatus] = useState(prototypeMode ? "done" : "idle");
   const [error, setError] = useState("");
@@ -117,20 +105,18 @@ export default function App() {
         }
       : null,
   );
-  const [repairAttempts, setRepairAttempts] = useState(0);
-  const [lastRepairProvider, setLastRepairProvider] = useState("");
   const [draftHistory, setDraftHistory] = useState([]);
-  const [repairScope, setRepairScope] = useState(null);
   const [workflowId, setWorkflowId] = useState(prototypeMode ? 1 : 0);
   const [autoGenerateTitles, setAutoGenerateTitles] = useState(prototypeMode);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [activeHistory, setActiveHistory] = useState(null);
   const [historyNotice, setHistoryNotice] = useState("");
-  const [settingsTab, setSettingsTab] = useState("preferences");
+  const [settingsTab, setSettingsTab] = useState("creation");
   const [contentPreferences, setContentPreferences] = useState(
     loadContentPreferences,
   );
+  const [promptState, setPromptState] = useState(null);
   const [health, setHealth] = useState({
     configured: false,
     providers: [],
@@ -143,10 +129,16 @@ export default function App() {
       .catch(() => setHealth({ configured: false, providers: [] }));
   }, []);
 
-  const validation = useMemo(() => validateDraft(draft), [draft]);
+  useEffect(() => {
+    if (prototypeMode) return;
+    fetch("/api/prompts")
+      .then((response) => response.json())
+      .then(setPromptState)
+      .catch(() => setPromptState(null));
+  }, []);
+
   const isGenerating = status === "generating";
-  const isRepairing = status === "repairing";
-  const isWorking = isGenerating || isRepairing;
+  const isWorking = isGenerating;
   const configuredCount = health.providers.filter(
     (provider) => provider.configured,
   ).length;
@@ -156,10 +148,7 @@ export default function App() {
     setStatus("generating");
     setError("");
     setGeneration(null);
-    setRepairAttempts(0);
-    setLastRepairProvider("");
     setDraftHistory([]);
-    setRepairScope(null);
     setHistoryNotice("");
     try {
       const result = prototypeMode
@@ -167,7 +156,7 @@ export default function App() {
             window.setTimeout(
               () =>
                 resolve({
-                  draft: PROTOTYPE_DRAFT_FAILED,
+                  draft: PROTOTYPE_DRAFT_PASSED,
                   provider: "prototype",
                   providerLabel: "本地交互稿",
                   model: "不调用模型",
@@ -211,93 +200,16 @@ export default function App() {
     );
   }
 
-  function openSettings(tab = "preferences") {
+  function openSettings(tab = "creation") {
     setSettingsTab(tab);
     setSettingsOpen(true);
   }
 
-  async function repair(scope = null) {
-    if (!draft || validation.valid || isWorking || repairAttempts >= 2) return;
-    const repairChecks = validation.checks.map((check) => ({
-      ...check,
-      label: repairCheckLabels.get(check.id) || check.label,
-    }));
-    const requestedIds = new Set(scope?.checkIds || []);
-    const failedChecks = repairChecks.filter(
-      (check) =>
-        !check.pass && (!requestedIds.size || requestedIds.has(check.id)),
-    );
-    if (!failedChecks.length) return;
-    const passedChecks = repairChecks.filter((check) => check.pass);
-    const scopedStrategy = getRepairStrategy({
-      ...validation,
-      checks: failedChecks,
-    });
-    const hasAlternativeProvider = health.providers.some(
-      (provider) =>
-        provider.configured && provider.id !== lastRepairProvider,
-    );
-    setStatus("repairing");
-    setError("");
-    setRepairScope(
-      scope || {
-        id: "all",
-        label: "全部未通过项目",
-        checkIds: failedChecks.map((check) => check.id),
-      },
-    );
-
-    try {
-      const result = prototypeMode
-        ? await new Promise((resolve) => {
-            window.setTimeout(
-              () =>
-                resolve({
-                  draft: PROTOTYPE_DRAFT_PASSED,
-                  provider: "prototype",
-                  providerLabel: "本地交互稿",
-                  model: "不调用模型",
-                  attempts: [],
-                }),
-              850,
-            );
-          })
-        : await postJson("/api/repair", {
-            input,
-            draft,
-            failedChecks,
-            passedChecks,
-            mode: scopedStrategy.mode,
-            preferences: contentPreferences,
-            historyId: activeHistory?.id,
-            historyVersion: activeHistory?.version,
-            skipProvider:
-              repairAttempts >= 1 && hasAlternativeProvider
-                ? lastRepairProvider
-                : null,
-          });
-      setDraftHistory((history) =>
-        [...history, { draft, generation }].slice(-2),
-      );
-      setDraft(result.draft);
-      setGeneration(result);
-      if (result.historyId) {
-        setActiveHistory({
-          id: result.historyId,
-          version: result.historyVersion,
-        });
-      }
-      setHistoryNotice(getHistoryNotice(result));
-      setLastRepairProvider(result.provider);
-      setRepairAttempts((attempts) => attempts + 1);
-      setAutoGenerateTitles(true);
-      setWorkflowId((current) => current + 1);
-      setStatus("done");
-      setRepairScope(null);
-    } catch (repairError) {
-      setError(repairError.message);
-      setStatus("error");
-    }
+  async function updatePrompts(payload) {
+    if (prototypeMode) return promptState;
+    const result = await postJson("/api/prompts", payload);
+    setPromptState(result);
+    return result;
   }
 
   function restorePreviousDraft() {
@@ -308,7 +220,6 @@ export default function App() {
     setDraftHistory((history) => history.slice(0, -1));
     setError("");
     setStatus("done");
-    setRepairScope(null);
     setAutoGenerateTitles(false);
     setWorkflowId((current) => current + 1);
   }
@@ -370,14 +281,11 @@ export default function App() {
       CONTENT_PREFERENCE_STORAGE_KEY,
       JSON.stringify(restoredPreferences),
     );
-    setRepairAttempts(0);
-    setLastRepairProvider("");
     setDraftHistory([]);
-    setRepairScope(null);
     setHistoryNotice(
       version.version === record.currentVersion
         ? "已载入历史笔记，未调用模型。"
-        : `已载入历史版本 ${version.version}，后续修复会创建新版本。`,
+        : `已载入历史版本 ${version.version}，可继续重新生成需要调整的部分。`,
     );
     setError("");
     setStatus("done");
@@ -390,7 +298,7 @@ export default function App() {
     if (activeHistory?.id === id) {
       setActiveHistory(null);
       setHistoryNotice(
-        "当前工作区内容仍然保留，但对应历史记录已删除；下次修复会创建新记录。",
+        "当前工作区内容仍然保留，但对应历史记录已删除；下次生成会创建新记录。",
       );
     }
   }
@@ -428,7 +336,7 @@ export default function App() {
             type="button"
             title="设置"
             aria-label="设置"
-            onClick={() => openSettings("preferences")}
+            onClick={() => openSettings("creation")}
           >
             <SettingsIcon />
           </button>
@@ -512,9 +420,7 @@ export default function App() {
                         return `${attempt.label} 成功`;
                       }
                       if (attempt.status === "skipped") {
-                        return attempt.message === "本次修复改用其他模型"
-                          ? `${attempt.label} 已跳过`
-                          : `${attempt.label} 未配置`;
+                        return `${attempt.label} 未配置`;
                       }
                       return `${attempt.label} 失败`;
                     })
@@ -528,7 +434,7 @@ export default function App() {
               <ol>
                 <li>链接会先在本地服务端解析成正文。</li>
                 <li>生成通常需要几分钟，请保持此页面打开。</li>
-                <li>最终草稿会按原始 Markdown 规范逐项检查。</li>
+                <li>生成规则来自当前提示词方案，不满意可分部分重新生成。</li>
               </ol>
             </div>
           </div>
@@ -543,16 +449,8 @@ export default function App() {
             </div>
             <div className="toolbar-actions">
                   {draft && (
-                    <span
-                  className={`validation-summary ${
-                    validation.valid ? "valid" : "invalid"
-                  }`}
-                    >
-                  {validation.valid
-                    ? `${validation.checks.length}/${validation.checks.length} 通过`
-                    : `${validation.checks.filter((check) => check.pass).length}/${validation.checks.length} 通过 · ${
-                        validation.checks.filter((check) => !check.pass).length
-                      } 需修复`}
+                    <span className="prompt-profile-summary">
+                      {generation?.promptProfile?.name || promptState?.defaultProfile?.name || "当前提示词"}
                     </span>
                   )}
             </div>
@@ -560,7 +458,7 @@ export default function App() {
           <div
             className={`document-scroll ${
               isGenerating ? "is-loading" : ""
-            } ${isRepairing ? "is-repairing" : ""}`}
+            }`}
           >
             {isGenerating ? (
               <div className="generating-state" aria-live="polite">
@@ -579,13 +477,7 @@ export default function App() {
               draft ? (
                 <PublishWorkflow
                   draft={draft}
-                  validation={validation}
-                  attempts={repairAttempts}
                   historyCount={draftHistory.length}
-                  isRepairing={isRepairing}
-                  repairScope={repairScope}
-                  repairError={draft ? error : ""}
-                  onRepair={repair}
                   onRestore={restorePreviousDraft}
                   workflowId={workflowId}
                   autoGenerateTitles={autoGenerateTitles}
@@ -613,10 +505,12 @@ export default function App() {
         open={settingsOpen}
         health={health}
         preferences={contentPreferences}
+        promptState={promptState}
         initialTab={settingsTab}
         onClose={() => setSettingsOpen(false)}
         onSave={saveSettings}
         onSavePreferences={saveContentPreferences}
+        onUpdatePrompts={updatePrompts}
       />
       <HistoryDialog
         open={historyOpen}

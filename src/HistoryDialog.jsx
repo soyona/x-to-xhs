@@ -24,11 +24,6 @@ function formatTime(value) {
   }).format(new Date(value));
 }
 
-function validationLabel(validation) {
-  if (!validation?.total) return "尚未检查";
-  return `${validation.passed}/${validation.total} 通过`;
-}
-
 export function HistoryDialog({
   open,
   activeHistoryId,
@@ -194,7 +189,7 @@ export function HistoryDialog({
                       {record.currentVersion}
                     </span>
                     <small>
-                      {validationLabel(record.validation)}
+                      {record.promptProfile?.name || "历史提示词方案"}
                       {record.generation?.providerLabel
                         ? ` · ${record.generation.providerLabel}`
                         : ""}
@@ -246,7 +241,7 @@ export function HistoryDialog({
                             key={version.version}
                           >
                             版本 {version.version} ·{" "}
-                            {version.type === "generate" ? "首次生成" : "修复"}
+                            {version.type === "generate" ? "首次生成" : "内容版本"}
                           </option>
                         ))}
                     </select>
@@ -255,9 +250,9 @@ export function HistoryDialog({
 
                 <div className="history-meta">
                   <span>
-                    {validationLabel(
-                      activeVersion.validation || detail.validation,
-                    )}
+                    {activeVersion.promptProfile?.name ||
+                      detail.promptProfile?.name ||
+                      "历史提示词方案"}
                   </span>
                   <span>
                     {activeVersion.providerLabel ||

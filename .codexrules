@@ -48,7 +48,7 @@
 - 输入：完整 X 帖子文本，或一条 `x.com` / `twitter.com` 帖子 URL。
 - 输出：小红书平台「写长文」笔记。
 - 不做：视频、普通图文笔记、播客或自动发布。
-- Markdown 只用于模型输出、内部拆分和确定性校验；复制到小红书时输出清理后的纯文本。
+- Markdown 只用于模型输出和内部拆分；复制到小红书时输出清理后的纯文本。
 
 ## 不可破坏的产品约束
 
@@ -62,13 +62,10 @@
   4. 发布标题
   5. 正文描述
   6. 标签
-  7. 检查并发布
-- 规范检查必须融合到 `02` 对应的发布步骤，并区分：
-  - 11 项可自动判定条件。
-  - 8 项发布前人工内容复核。
-- 未通过项就地显示当前值、目标要求和“修复此部分”；通过项默认折叠。
-- 固定分区与审稿自查放在第 7 步，整稿顶部保留自动检查汇总。
-- 人工复核项不得计入自动失败数量，也不得触发自动重写。
+  7. 预览并发布
+- 全局、标题、正文、正文摘要和标签规则只存在于当前提示词方案，不得在代码中重复写死。
+- 页面不执行内容通过/失败判定；模型结果不符合预期时由用户主动重新生成。
+- JSON、非空结果和候选数量等技术协议必须保留，但不得扩展为内容 validation。
 - 模型顺序固定：Gemini → Groq Qwen → 智谱 GLM → 硅基流动 Qwen →
   OpenRouter Free。
 - API Key 只能存在本地服务端 `.env`：
@@ -83,11 +80,10 @@
 
 | 主题 | 权威来源 | 修改时必须同步 |
 |---|---|---|
-| 长文内容规范 | `Long-form-post-prompt.md` | `src/validation.js`、相关测试、memory-bank 摘要 |
+| 默认提示词与内容规范 | `Long-form-post-prompt.md` | `promptStore.mjs`、提示词测试、memory-bank 摘要 |
+| 本地提示词方案 | `promptStore.mjs` | `server.mjs`、设置页、测试、techContext |
 | 供应商顺序与默认模型 | `providers.mjs` | 设置页、README、测试 |
 | 发布分段流程 | `src/PublishWorkflow.jsx`、`src/xiaohongshuPublish.js` | 对应测试、产品上下文 |
-| 自动检查与人工复核 | `src/validation.js` | `src/PublishWorkflow.jsx`、`src/App.jsx`、测试、产品上下文 |
-| 修复策略 | `src/repairStrategy.js`、`server.mjs` | `src/RepairControls.jsx`、修复测试、activeContext |
 | API 设置安全 | `server.mjs`、`src/ApiSettingsDialog.jsx` | `.env.example`、安全测试、techContext |
 | 历史笔记 | `historyStore.mjs` | `server.mjs`、`src/HistoryDialog.jsx`、测试、techContext |
 
@@ -135,21 +131,20 @@ npm run check
 
 | 文件 | 职责 |
 |---|---|
-| `src/App.jsx` | 两栏主界面、生成/修复状态、健康状态、设置入口 |
-| `src/ApiSettingsDialog.jsx` | 右上角 API Key 与模型配置弹窗 |
+| `src/App.jsx` | 两栏主界面、生成状态、健康状态、设置入口 |
+| `src/ApiSettingsDialog.jsx` | 快速设置、高级提示词、API 与模型配置弹窗 |
 | `src/HistoryDialog.jsx` | 历史列表、版本详情、载入和删除弹窗 |
-| `src/contentPreferences.js` | 创作偏好字段、默认值、白名单清洗与 Prompt 注入 |
-| `src/PublishWorkflow.jsx` | 小红书 7 步发布、分段复制、内联检查与人工复核 |
-| `src/validation.js` | Markdown 解析、计数、自动检查和人工检查分组 |
-| `src/repairStrategy.js` | repair / revise / regenerate 策略选择 |
+| `src/contentPreferences.js` | 快速设置字段、默认值、白名单清洗与 Prompt 注入 |
+| `src/PublishWorkflow.jsx` | 小红书 7 步发布、分段复制与主动重新生成 |
+| `promptStore.mjs` | 默认提示词解析、本地方案存储和模块组合 |
 | `src/xiaohongshuPublish.js` | 把 Markdown 拆成标题、正文、描述、标签 |
 | `src/xiaohongshuText.js` | 清理 Markdown 为可粘贴纯文本 |
 | `providers.mjs` | 五家模型适配、错误归一化和自动降级 |
 | `server.mjs` | 本地 HTTP API、X URL 解析、提示词组装、设置持久化 |
 | `historyStore.mjs` | 本地历史 JSON、备份、排序、限额与原子写入 |
 | `scripts/dev.mjs` | 同时启动 Node API 与 Vite |
-| `tests/` | Node 原生测试，覆盖供应商、设置、修复、验证和文本拆分 |
+| `tests/` | Node 原生测试，覆盖提示词方案、供应商、设置和文本拆分 |
 
 ## 当前需要注意
 
-修复链路能够把失败项、当前值、目标要求、通过项和原草稿提交给模型，但复合检查的失败原因仍不够细；单个 `structure` 失败目前可能直接触发整篇重生。处理相关任务前先读 `memory-bank/activeContext.md`。
+提示词内容规则可以通过页面方案或直接修改 `Long-form-post-prompt.md` 调整。修改模块边界、输入注入或 JSON 协议前先读 `memory-bank/activeContext.md`。
