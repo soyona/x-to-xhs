@@ -1,7 +1,9 @@
-![Demo1](./product-assets/demo1.png)
-![Demo2](./product-assets/demo2.png)
-![Demo3](./product-assets/demo3.png)
-![Demo4](./product-assets/demo4.png)
+![首页](./product-assets/demo1.png)
+![笔记预览](./product-assets/demo2.png)
+![历史笔记](./product-assets/demo5.png)
+![个性化配置](./product-assets/demo6.png)
+![API 配置](./product-assets/demo7.png)
+
 # X → 小红书「写长文」工具
 
 把 X 上值得深入讨论的 AI、开发者工具与工作流内容，转化为可审稿、可检查、可按步骤发布的小红书「写长文」草稿。
