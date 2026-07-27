@@ -5,6 +5,7 @@ import {
   DEFAULT_CONTENT_PREFERENCES,
   normalizeContentPreferences,
 } from "./contentPreferences";
+import { History as HistoryIcon, Settings as SettingsIcon } from "lucide-react";
 import { AlertIcon, ArrowIcon } from "./icons";
 import { HistoryDialog } from "./HistoryDialog";
 import { MarkdownPreview } from "./MarkdownPreview";
@@ -414,18 +415,22 @@ export default function App() {
             {prototypeMode && " · 交互稿"}
           </div>
           <button
-            className="history-button"
+            className="section-copy-button topbar-icon-button"
             type="button"
+            title="查看历史"
+            aria-label="查看历史"
             onClick={() => setHistoryOpen(true)}
           >
-            <span className="history-button-prefix">查看</span>历史
+            <HistoryIcon />
           </button>
           <button
-            className="settings-button"
+            className="section-copy-button topbar-icon-button"
             type="button"
+            title="设置"
+            aria-label="设置"
             onClick={() => openSettings("preferences")}
           >
-            设置
+            <SettingsIcon />
           </button>
         </div>
       </header>

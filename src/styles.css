@@ -125,24 +125,6 @@ svg {
   gap: 12px;
 }
 
-.settings-button,
-.history-button {
-  min-height: 34px;
-  border: 1px solid #cfd3d9;
-  border-radius: 8px;
-  padding: 0 13px;
-  color: #343a43;
-  background: #fff;
-  font-size: 12px;
-  font-weight: 750;
-}
-
-.settings-button:hover,
-.history-button:hover {
-  border-color: #aeb4bc;
-  background: #f7f8f9;
-}
-
 .status-dot {
   width: 8px;
   height: 8px;
@@ -858,6 +840,10 @@ textarea:focus {
 .section-copy-button svg {
   width: 15px;
   height: 15px;
+}
+
+.topbar-icon-button {
+  flex: 0 0 40px;
 }
 
 .section-export-button {
@@ -2270,18 +2256,6 @@ textarea:focus {
 
   .topbar-actions {
     gap: 9px;
-  }
-
-  .settings-button {
-    padding: 0 10px;
-  }
-
-  .history-button {
-    padding: 0 9px;
-  }
-
-  .history-button-prefix {
-    display: none;
   }
 
   .status-dot {
