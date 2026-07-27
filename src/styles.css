@@ -1289,20 +1289,6 @@ textarea:focus {
   text-align: center;
 }
 
-.empty-mark {
-  display: grid;
-  width: 64px;
-  height: 72px;
-  place-items: center;
-  margin-bottom: 22px;
-  border: 1px solid #dad8d2;
-  border-radius: 3px 12px 12px 3px;
-  color: var(--accent);
-  background: #fff;
-  font-family: "Songti SC", serif;
-  font-size: 27px;
-}
-
 .empty-state h2,
 .generating-state h2 {
   margin-bottom: 8px;
@@ -1316,6 +1302,213 @@ textarea:focus {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.7;
+}
+
+.empty-workflow-guide {
+  min-height: 560px;
+  justify-content: flex-start;
+  padding: clamp(48px, 7vh, 82px) clamp(28px, 5vw, 72px) 52px;
+}
+
+.empty-workflow-heading h2 {
+  margin-bottom: 10px;
+  color: var(--ink);
+  font-size: clamp(25px, 2.35vw, 36px);
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  line-height: 1.35;
+}
+
+.empty-workflow-heading p {
+  max-width: none;
+  margin: 0;
+  font-size: 14px;
+}
+
+.workflow-map {
+  width: min(100%, 980px);
+  margin-top: clamp(46px, 6vh, 68px);
+}
+
+.workflow-map-stages,
+.publishing-route-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workflow-map-stages {
+  display: grid;
+  grid-template-columns:
+    minmax(120px, 1fr) minmax(52px, 0.55fr) minmax(120px, 1fr)
+    minmax(52px, 0.55fr) minmax(160px, 1.15fr) minmax(52px, 0.55fr)
+    minmax(120px, 1fr);
+  align-items: center;
+}
+
+.workflow-map-stage {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-direction: column;
+}
+
+.workflow-start-cue {
+  position: absolute;
+  top: -48px;
+  left: 0;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.workflow-start-cue::after {
+  position: absolute;
+  top: 23px;
+  left: 5px;
+  width: 34px;
+  height: 22px;
+  border-bottom: 1px dashed var(--accent);
+  border-left: 1px dashed var(--accent);
+  border-radius: 0 0 0 18px;
+  content: "";
+  transform: rotate(-10deg);
+}
+
+.workflow-stage-icon {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  margin-bottom: 14px;
+  border: 1px solid #f2c8c4;
+  border-radius: 50%;
+  color: var(--ink);
+  background: rgba(255, 240, 238, 0.78);
+}
+
+.workflow-stage-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.65;
+}
+
+.workflow-map-stage strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.workflow-map-stage small {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.workflow-map-connector {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  color: #656b74;
+}
+
+.workflow-map-connector span {
+  min-width: 20px;
+  flex: 1;
+  border-top: 1px dashed #aeb3ba;
+}
+
+.workflow-map-connector svg {
+  width: 16px;
+  height: 16px;
+  margin-left: -2px;
+  stroke-width: 1.8;
+}
+
+.publishing-route {
+  position: relative;
+  width: 72%;
+  margin: 56px 0 0 28%;
+  padding-top: 24px;
+}
+
+.publishing-route-branch {
+  position: absolute;
+  top: -56px;
+  right: 45.5%;
+  width: 50%;
+  height: 56px;
+  border-right: 1px solid var(--accent);
+  border-bottom: 1px solid var(--accent);
+}
+
+.publishing-route-steps {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(66px, 1fr));
+}
+
+.publishing-route-steps::before {
+  position: absolute;
+  top: 0;
+  right: 7%;
+  left: 7%;
+  border-top: 1px solid var(--accent);
+  content: "";
+}
+
+.publishing-route-steps li {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-direction: column;
+  padding: 30px 5px 0;
+}
+
+.publishing-route-steps li::before {
+  position: absolute;
+  top: 0;
+  height: 18px;
+  border-left: 1px solid var(--accent);
+  content: "";
+}
+
+.publishing-step-number {
+  position: absolute;
+  top: 21px;
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.publishing-step-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  margin-top: 22px;
+  color: #454a52;
+}
+
+.publishing-step-icon svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.7;
+}
+
+.publishing-route-steps strong {
+  margin-top: 7px;
+  color: #343840;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
 .generating-state {
@@ -2302,6 +2495,61 @@ textarea:focus {
 
   .markdown-document {
     padding: 34px 22px 60px;
+  }
+
+  .empty-workflow-guide {
+    min-height: 0;
+    padding: 28px 18px 38px;
+  }
+
+  .empty-workflow-heading h2 {
+    font-size: 22px;
+  }
+
+  .workflow-map {
+    margin-top: 42px;
+  }
+
+  .workflow-map-stages {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 28px 16px;
+  }
+
+  .workflow-map-stage small {
+    display: none;
+  }
+
+  .workflow-map-connector {
+    display: none;
+  }
+
+  .workflow-start-cue {
+    top: -30px;
+    left: 12px;
+  }
+
+  .workflow-start-cue::after {
+    display: none;
+  }
+
+  .publishing-route {
+    width: 100%;
+    margin: 36px 0 0;
+  }
+
+  .publishing-route-branch {
+    display: none;
+  }
+
+  .publishing-route-steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    row-gap: 14px;
+  }
+
+  .publishing-route-steps::before {
+    right: 12%;
+    left: 12%;
   }
 
   .publish-workflow {
