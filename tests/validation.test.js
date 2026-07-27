@@ -100,23 +100,36 @@ ${formattedSummary.replace(/\n+/gu, " ")}
   assert.equal(unformatted.counts.summaryCount, 227);
   assert.equal(unformattedCheck.pass, false);
   assert.match(unformattedCheck.actual, /1块，0个编号要点/);
+
+  const stackedMarker = validateDraft(`## 正文小结 / 摘要
+
+${formattedSummary.replace("1. ", "1. 🔹 ")}
+
+## 推荐标签`);
+  assert.equal(
+    stackedMarker.checks.find((check) => check.id === "summary").pass,
+    false,
+  );
 });
 
 test("检查固定结构、结尾、标签数量与标签格式", () => {
-  const chapters = `# 01 💡 实战落地
+  const chapters = `# 01 实战落地
 
-## ▶️ 1.1 第一个节点
+## 1.1 第一个节点
 
 实战内容
 
-# 02 💡 核心复盘总结与结尾
+# 02 核心复盘总结与结尾
 
-## ▶️ 2.1 第二个节点
+## 2.1 第二个节点
 
 复盘内容`;
   const draft = `# 这是一个用于测试规范检查器的合格标题呀
 
 # 框架总览
+
+- 实战落地
+- 核心复盘总结与结尾
 
 ${chapters}
 
@@ -168,7 +181,7 @@ test("检查项与Markdown规范一致且不再要求配图和排版建议", () 
   );
   assert.equal(
     checks.get("structure"),
-    "含#框架总览、2–15个#一级章节、每章1–3个##二级节点、实战落地和核心复盘；无伪分页信号",
+    "目录只用-，章节只用# 01，节点只用## 1.1；2–15章且每章1–3节点；无标记叠加和伪分页信号",
   );
   assert.equal(
     checks.get("fixed-format"),
@@ -177,6 +190,32 @@ test("检查项与Markdown规范一致且不再要求配图和排版建议", () 
   assert.equal(checks.get("tag-format"), "全部标签同一行，每个以#开头");
   assert.equal(checks.has("images"), false);
   assert.equal(checks.has("layout"), false);
+});
+
+test("拒绝目录、章节和节点叠加编号或Emoji", () => {
+  const draft = `# 焦虑救星🔥超全干货AI实战进阶指南🚀
+
+# 框架总览
+
+- 01 💡 实战落地
+- 02 💡 核心复盘总结
+
+# 01 💡 实战落地
+
+## ▶️ 1.1 方法
+
+正文
+
+# 02 💡 核心复盘总结
+
+## ▶️ 2.1 结尾
+
+正文`;
+  const structure = validateDraft(draft).checks.find(
+    (check) => check.id === "structure",
+  );
+
+  assert.equal(structure.pass, false);
 });
 
 test("检查项严格按Markdown章节建立父子分组", () => {

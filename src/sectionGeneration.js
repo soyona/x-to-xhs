@@ -21,6 +21,7 @@ const sectionInstructions = {
 - 保留适合小红书长文的结构化Markdown正文。
 - 正文不超过10000字，不为凑字数虚构案例或数据。
 - 包含框架总览、2–15个一级章节、每章1–3个二级节点、实战落地和核心复盘。
+- 同一行只保留一种主标记：目录严格使用“- 标题”，一级章节严格使用“# 01 标题”，二级标题严格使用“## 1.1 标题”；不得叠加章节编号、Emoji或其他行首符号。
 - 不输出伪分页线、未完待续或额外固定尾部分区。`,
   "publish-title": `生成恰好3个差异明显的发布标题。
 - 每个标题不超过20个Unicode字符。
@@ -210,4 +211,3 @@ export function validateSectionCandidates(section, candidates, { draft }) {
   if (!valid) throw new Error("模型返回的候选未全部通过当前步骤规则，请重新生成。");
   return candidates;
 }
-

@@ -57,9 +57,9 @@ test("移除 Markdown 装饰符并保留适合小红书的文本结构", () => {
 });
 
 test("保留H1、H2、无序列表和有序列表标记", () => {
-  const source = `# 01 💡 一级标题
+  const source = `# 01 一级标题
 
-## ▶️ 1.1 二级标题
+## 1.1 二级标题
 
 - 无序列表
 1. 有序列表`;
@@ -68,25 +68,25 @@ test("保留H1、H2、无序列表和有序列表标记", () => {
 });
 
 test("为正文复制同时生成富文本结构和无井号纯文本兜底", () => {
-  const source = `# 01 💡 一级标题
+  const source = `# 01 一级标题
 
-## ▶️ 1.1 二级标题
+## 1.1 二级标题
 
 - 无序列表
 1. 有序列表`;
 
   assert.equal(
     toXiaohongshuPlainText(source),
-    `01 💡 一级标题
+    `01 一级标题
 
-▶️ 1.1 二级标题
+1.1 二级标题
 
 • 无序列表
 1. 有序列表`,
   );
   assert.equal(
     toXiaohongshuRichHtml(source),
-    "<div><h1>01 💡 一级标题</h1><p><br></p><h2>▶️ 1.1 二级标题</h2><p><br></p><ul><li>无序列表</li></ul><ol><li>有序列表</li></ol></div>",
+    "<div><h1>01 一级标题</h1><p><br></p><h2>1.1 二级标题</h2><p><br></p><ul><li>无序列表</li></ul><ol><li>有序列表</li></ol></div>",
   );
 });
 

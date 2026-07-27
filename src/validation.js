@@ -1,9 +1,9 @@
 const sectionMatchers = {
   overview: /(?:^|\n)#{0,3}\s*(?:\*\*)?框架总览/,
   practice:
-    /(?:^|\n)#{0,3}\s*(?:\*\*)?(?:(?:0[1-9]|1[0-5])\s+💡\s+|▶️?\s+\d{1,2}\.\d+\s+)?[^\n]*实战落地/,
+    /(?:^|\n)#{0,3}\s*(?:\*\*)?(?:(?:0[1-9]|1[0-5])\s+|\d{1,2}\.\d+\s+)?[^\n]*实战落地/,
   conclusion:
-    /(?:^|\n)#{0,3}\s*(?:\*\*)?(?:(?:0[1-9]|1[0-5])\s+💡\s+|▶️?\s+\d{1,2}\.\d+\s+)?[^\n]*(?:核心复盘总结|结尾|结语|写在最后)/,
+    /(?:^|\n)#{0,3}\s*(?:\*\*)?(?:(?:0[1-9]|1[0-5])\s+|\d{1,2}\.\d+\s+)?[^\n]*(?:核心复盘总结|结尾|结语|写在最后)/,
   summary: /(?:^|\n)#{0,3}\s*(?:\*\*)?(?:正文小结\s*[\/／]\s*摘要|正文小结|摘要)/,
   tags: /(?:^|\n)#{0,3}\s*(?:\*\*)?推荐标签/,
   review: /(?:^|\n)#{0,3}\s*(?:\*\*)?【?审稿自查】?/,
@@ -206,8 +206,10 @@ function inspectSummaryLayout(summary) {
       .filter(Boolean) || [];
   const numberedItemsValid =
     numberedLines.length === 3 &&
-    numberedLines.every((line, index) =>
-      new RegExp(`^${index + 1}\\.\\s+\\S`, "u").test(line),
+    numberedLines.every(
+      (line, index) =>
+        new RegExp(`^${index + 1}\\.\\s+\\S`, "u").test(line) &&
+        !/^\d+\.\s+[\p{Extended_Pictographic}▶•☑⚠👉📌🔹]/u.test(line),
     );
 
   return {
@@ -235,12 +237,13 @@ function bodyText(markdown) {
 
 function inspectChapterStructure(body) {
   const chapterPattern =
-    /(?:^|\n)#\s+(0[1-9]|1[0-5])\s+💡\s+[^\n]+/gu;
+    /(?:^|\n)#\s+(0[1-9]|1[0-5])\s+([^\n]+)/gu;
   const chapterMatches = Array.from(body.matchAll(chapterPattern)).map(
     (match) => {
       const leadingBreak = match[0].startsWith("\n") ? 1 : 0;
       return {
         number: Number(match[1]),
+        label: match[2].trim(),
         start: match.index + leadingBreak,
         contentStart: match.index + match[0].length,
       };
@@ -257,12 +260,16 @@ function inspectChapterStructure(body) {
     const end = chapterMatches[index + 1]?.start ?? body.length;
     const content = body.slice(chapter.contentStart, end);
     const nodePattern =
-      /(?:^|\n)##\s+▶️?\s+(\d{1,2})\.(\d+)\s+[^\n]+/gu;
+      /(?:^|\n)##\s+(\d{1,2})\.(\d+)\s+([^\n]+)/gu;
     const nodeMatches = Array.from(content.matchAll(nodePattern)).map(
       (match) => ({
         chapterNumber: Number(match[1]),
         nodeNumber: Number(match[2]),
+        label: match[3].trim(),
       }),
+    );
+    const labelsUseSingleMarker = nodeMatches.every(
+      (node) => !/^[\p{Extended_Pictographic}▶•☑⚠👉📌🔹]/u.test(node.label),
     );
     const nodesAreSequential = nodeMatches.every(
       (node, nodeIndex) =>
@@ -273,9 +280,36 @@ function inspectChapterStructure(body) {
     return {
       nodeCountValid: nodeMatches.length >= 1 && nodeMatches.length <= 3,
       nodesAreSequential,
+      labelsUseSingleMarker,
     };
   });
 
+  const overviewStart = body.search(/(?:^|\n)#\s+框架总览\s*(?:\n|$)/u);
+  const firstChapterStart = chapterMatches[0]?.start ?? -1;
+  const overviewLines =
+    overviewStart >= 0 && firstChapterStart > overviewStart
+      ? body
+          .slice(overviewStart, firstChapterStart)
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line.startsWith("- "))
+      : [];
+  const overviewUsesSingleMarker =
+    overviewLines.length === chapterMatches.length &&
+    overviewLines.every(
+      (line) =>
+        !/^-\s+(?:(?:0[1-9]|1[0-5])(?:\s|$)|[\p{Extended_Pictographic}▶•☑⚠👉📌🔹])/u.test(
+          line,
+        ),
+    );
+  const chapterLabelsUseSingleMarker = chapterMatches.every(
+    (chapter) =>
+      !/^[\p{Extended_Pictographic}▶•☑⚠👉📌🔹]/u.test(chapter.label),
+  );
+  const hasStackedListMarker =
+    /(?:^|\n)(?:-\s+(?:(?:0[1-9]|1[0-5])(?:\s|$)|[\p{Extended_Pictographic}▶•☑⚠👉📌🔹])|\d+\.\s+[\p{Extended_Pictographic}▶•☑⚠👉📌🔹])/u.test(
+      body,
+    );
   const hasFalsePaginationSignal =
     /(?:^|\n)\s*---\s*(?:\n|$)|未完待续|下滑查看下一章/u.test(body);
 
@@ -284,11 +318,15 @@ function inspectChapterStructure(body) {
     valid:
       chapterCountValid &&
       numbersAreSequential &&
+      overviewUsesSingleMarker &&
+      chapterLabelsUseSingleMarker &&
+      !hasStackedListMarker &&
       !hasFalsePaginationSignal &&
       chapters.every(
         (chapter) =>
           chapter.nodeCountValid &&
-          chapter.nodesAreSequential,
+          chapter.nodesAreSequential &&
+          chapter.labelsUseSingleMarker,
       ),
   };
 }
@@ -444,7 +482,7 @@ export function validateDraft(markdown = "") {
       id: "structure",
       label: "正文结构",
       requirement:
-        "含#框架总览、2–15个#一级章节、每章1–3个##二级节点、实战落地和核心复盘；无伪分页信号",
+        "目录只用-，章节只用# 01，节点只用## 1.1；2–15章且每章1–3节点；无标记叠加和伪分页信号",
       actual: structureValid
         ? `${chapterStructure.chapterCount}章，结构完整`
         : `${chapterStructure.chapterCount}章，结构不完整`,
