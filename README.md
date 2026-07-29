@@ -1,3 +1,5 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ![首页](./product-assets/demo1.png)
 ![笔记预览](./product-assets/demo2.png)
 ![历史笔记](./product-assets/demo5.png)
@@ -246,3 +248,8 @@ npm run check
 
 参与开发或修改功能前，请先阅读 [`.codexrules`](./.codexrules) 和
 [`memory-bank/activeContext.md`](./memory-bank/activeContext.md)。
+
+
+## 📄 License
+
+本项目基于 [MIT License](LICENSE) 开源。
