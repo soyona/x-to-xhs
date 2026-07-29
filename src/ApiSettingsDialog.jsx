@@ -320,7 +320,9 @@ export function ApiSettingsDialog({
           {
             apiKey: "",
             clearKey: false,
-            model: provider.model,
+            models: provider.models || [provider.model],
+            availableModels: provider.availableModels || [provider.model],
+            newModel: "",
           },
         ]),
       ),
@@ -586,7 +588,9 @@ export function ApiSettingsDialog({
                 const value = providers[provider.id] || {
                   apiKey: "",
                   clearKey: false,
-                  model: provider.model,
+                  models: provider.models || [provider.model],
+                  availableModels: provider.availableModels || [provider.model],
+                  newModel: "",
                 };
                 const isExpanded = expandedProviderId === provider.id;
                 const hasNewKey = Boolean(value.apiKey.trim());
@@ -621,9 +625,9 @@ export function ApiSettingsDialog({
                       </div>
                       <span
                         className="settings-provider-model-summary"
-                        title={value.model}
+                        title={value.models.join(" → ")}
                       >
-                        模型：{value.model || "未设置"}
+                        模型：{value.models.join(" → ") || "未设置"}
                       </span>
                       <button
                         className="settings-provider-manage"
@@ -692,23 +696,113 @@ export function ApiSettingsDialog({
                             )}
                           </label>
 
-                          <label htmlFor={`${provider.id}-model`}>
-                            模型
-                            <input
-                              id={`${provider.id}-model`}
-                              type="text"
-                              value={value.model}
-                              onChange={(event) =>
-                                updateProvider(provider.id, {
-                                  model: event.target.value,
-                                })
-                              }
-                              autoComplete="off"
-                              spellCheck="false"
-                              disabled={saving}
-                              required
-                            />
-                          </label>
+                          <div className="settings-model-field">
+                            <span>模型（按勾选顺序自动降级）</span>
+                            <div className="settings-model-list">
+                              {value.availableModels.map((model) => {
+                                const checked = value.models.includes(model);
+                                const isBuiltIn = (
+                                  provider.defaultModels || [provider.model]
+                                ).includes(model);
+                                return (
+                                  <div
+                                    className="settings-model-option"
+                                    key={model}
+                                  >
+                                    <label>
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={(event) => {
+                                          const models = event.target.checked
+                                            ? [...value.models, model]
+                                            : value.models.filter(
+                                                (item) => item !== model,
+                                              );
+                                          if (!models.length) {
+                                            setMessage("每项服务至少选择一个模型。");
+                                            return;
+                                          }
+                                          setMessage("");
+                                          updateProvider(provider.id, { models });
+                                        }}
+                                        disabled={saving}
+                                      />
+                                      <span>{model}</span>
+                                    </label>
+                                    {isBuiltIn ? (
+                                      <small>内置</small>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          updateProvider(provider.id, {
+                                            models: checked
+                                              ? value.models.filter(
+                                                  (item) => item !== model,
+                                                )
+                                              : value.models,
+                                            availableModels:
+                                              value.availableModels.filter(
+                                                (item) => item !== model,
+                                              ),
+                                          })
+                                        }
+                                        disabled={
+                                          saving ||
+                                          (checked && value.models.length === 1)
+                                        }
+                                      >
+                                        删除
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div className="settings-model-add">
+                              <input
+                                type="text"
+                                value={value.newModel}
+                                onChange={(event) =>
+                                  updateProvider(provider.id, {
+                                    newModel: event.target.value,
+                                  })
+                                }
+                                placeholder="输入模型名称"
+                                autoComplete="off"
+                                spellCheck="false"
+                                disabled={saving}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const model = value.newModel.trim();
+                                  if (!model) return;
+                                  if (model.includes(",")) {
+                                    setMessage("模型名称不能包含英文逗号。");
+                                    return;
+                                  }
+                                  setMessage("");
+                                  updateProvider(provider.id, {
+                                    availableModels: [
+                                      ...new Set([
+                                        ...value.availableModels,
+                                        model,
+                                      ]),
+                                    ],
+                                    models: [
+                                      ...new Set([...value.models, model]),
+                                    ],
+                                    newModel: "",
+                                  });
+                                }}
+                                disabled={saving || !value.newModel.trim()}
+                              >
+                                增加模型
+                              </button>
+                            </div>
+                          </div>
                         </div>
 
                         {provider.configured && !value.clearKey && (

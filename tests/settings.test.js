@@ -84,6 +84,71 @@ test("Gemini 可以按顺序保存多个逗号分隔的 Key", () => {
   );
 });
 
+test("可以保存有序多选模型和在线新增的候选模型", () => {
+  const updates = buildSettingsUpdates({
+    providers: {
+      gemini: {
+        apiKey: "",
+        clearKey: false,
+        models: ["gemini-3.6-flash", "gemini-2.5-pro"],
+        availableModels: [
+          "gemini-3.6-flash",
+          "gemini-3.5-flash",
+          "gemini-2.5-pro",
+          "gemini-custom",
+        ],
+      },
+    },
+  });
+
+  assert.equal(
+    updates.GEMINI_MODEL,
+    "gemini-3.6-flash,gemini-2.5-pro",
+  );
+  assert.equal(
+    updates.GEMINI_MODELS,
+    [
+      "gemini-3.6-flash",
+      "gemini-3.5-flash",
+      "gemini-2.5-pro",
+      "gemini-custom",
+    ].join(","),
+  );
+});
+
+test("多选模型至少保留一项", () => {
+  assert.throws(
+    () =>
+      buildSettingsUpdates({
+        providers: {
+          groq: {
+            apiKey: "",
+            clearKey: false,
+            models: [],
+            availableModels: ["qwen/qwen3.6-27b"],
+          },
+        },
+      }),
+    /至少选择一个/,
+  );
+});
+
+test("模型名称不能包含列表分隔符", () => {
+  assert.throws(
+    () =>
+      buildSettingsUpdates({
+        providers: {
+          groq: {
+            apiKey: "",
+            clearKey: false,
+            models: ["qwen/primary,qwen/fallback"],
+          },
+        },
+      }),
+    /不能包含英文逗号/,
+  );
+});
+
 test("可以保存智谱和硅基流动的 Key 与模型", () => {
   const updates = buildSettingsUpdates({
     providers: {

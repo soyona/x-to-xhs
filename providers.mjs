@@ -7,13 +7,20 @@ export const PROVIDERS = [
     label: "Gemini",
     keyName: "GEMINI_API_KEY",
     modelName: "GEMINI_MODEL",
+    modelsName: "GEMINI_MODELS",
     defaultModel: "gemini-3.5-flash",
+    defaultModels: [
+      "gemini-3.6-flash",
+      "gemini-3.5-flash",
+      "gemini-2.5-pro",
+    ],
   },
   {
     id: "groq",
     label: "Groq Qwen",
     keyName: "GROQ_API_KEY",
     modelName: "GROQ_MODEL",
+    modelsName: "GROQ_MODELS",
     defaultModel: "qwen/qwen3.6-27b",
     url: "https://api.groq.com/openai/v1/chat/completions",
     extraBody: { reasoning_format: "hidden" },
@@ -23,6 +30,7 @@ export const PROVIDERS = [
     label: "智谱 GLM",
     keyName: "ZHIPU_API_KEY",
     modelName: "ZHIPU_MODEL",
+    modelsName: "ZHIPU_MODELS",
     defaultModel: "glm-4.7-flash",
     url: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
   },
@@ -31,6 +39,7 @@ export const PROVIDERS = [
     label: "硅基流动 Qwen",
     keyName: "SILICONFLOW_API_KEY",
     modelName: "SILICONFLOW_MODEL",
+    modelsName: "SILICONFLOW_MODELS",
     defaultModel: "Qwen/Qwen3.5-4B",
     url: "https://api.siliconflow.cn/v1/chat/completions",
   },
@@ -39,6 +48,7 @@ export const PROVIDERS = [
     label: "OpenRouter Free",
     keyName: "OPENROUTER_API_KEY",
     modelName: "OPENROUTER_MODEL",
+    modelsName: "OPENROUTER_MODELS",
     defaultModel: "openrouter/free",
     url: "https://openrouter.ai/api/v1/chat/completions",
     extraHeaders: { "X-Title": "X to Xiaohongshu" },
@@ -64,13 +74,36 @@ function getProviderKeys(provider, env) {
   return keys.filter((key) => !isPlaceholderKey(key));
 }
 
+function splitModelList(value) {
+  if (typeof value !== "string") return [];
+  return [
+    ...new Set(
+      value.split(",").map((model) => model.trim()).filter(Boolean),
+    ),
+  ];
+}
+
 export function getProviderStatus(env = process.env) {
-  return PROVIDERS.map((provider) => ({
-    id: provider.id,
-    label: provider.label,
-    model: env[provider.modelName] || provider.defaultModel,
-    configured: getProviderKeys(provider, env).length > 0,
-  }));
+  return PROVIDERS.map((provider) => {
+    const models = splitModelList(env[provider.modelName]);
+    if (!models.length) models.push(provider.defaultModel);
+    const availableModels = [
+      ...new Set([
+        ...(provider.defaultModels || [provider.defaultModel]),
+        ...splitModelList(env[provider.modelsName]),
+        ...models,
+      ]),
+    ];
+    return {
+      id: provider.id,
+      label: provider.label,
+      model: models[0],
+      models,
+      defaultModels: provider.defaultModels || [provider.defaultModel],
+      availableModels,
+      configured: getProviderKeys(provider, env).length > 0,
+    };
+  });
 }
 
 function textFromGemini(body) {
@@ -377,16 +410,15 @@ export async function generateWithFallback({
       continue;
     }
 
-    try {
-      const keys = getProviderKeys(provider, env);
-      let result;
+    const keys = getProviderKeys(provider, env);
+    for (const model of status.models) {
       for (const [keyIndex, key] of keys.entries()) {
         const startedAt = Date.now();
         try {
-          result = await callProvider(provider, {
+          const result = await callProvider(provider, {
             prompt,
             key,
-            model: status.model,
+            model,
             fetchImpl,
             dispatcher,
           });
@@ -404,11 +436,16 @@ export async function generateWithFallback({
             keyCount: provider.id === "gemini" ? keys.length : null,
             message: "生成成功",
           }));
-          break;
+          return {
+            ...result,
+            provider: provider.id,
+            providerLabel: provider.label,
+            attempts,
+          };
         } catch (error) {
           attempts.push(attemptRecord({
             provider,
-            model: status.model,
+            model,
             status: "failed",
             startedAt,
             keyIndex: provider.id === "gemini" ? keyIndex + 1 : null,
@@ -422,28 +459,8 @@ export async function generateWithFallback({
               "PROVIDER_QUOTA_EXHAUSTED",
             ].includes(error?.code) &&
             keyIndex < keys.length - 1;
-          if (!hasNextGeminiKey) throw error;
+          if (!hasNextGeminiKey) break;
         }
-      }
-      return {
-        ...result,
-        provider: provider.id,
-        providerLabel: provider.label,
-        attempts,
-      };
-    } catch (error) {
-      const lastAttempt = attempts.at(-1);
-      if (
-        lastAttempt?.provider !== provider.id ||
-        lastAttempt.status !== "failed"
-      ) {
-        attempts.push(attemptRecord({
-          provider,
-          model: status.model,
-          status: "failed",
-          startedAt: Date.now(),
-          error,
-        }));
       }
     }
   }

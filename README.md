@@ -120,6 +120,10 @@ Gemini 支持按顺序配置多个 API Key；当前 Key 限流或额度耗尽后
 Gemini Key。所有 Gemini Key 都不可用后，才进入原有的模型降级链路。服务端会跳过
 没有配置 API Key 的服务，并向界面返回不包含密钥的安全错误摘要。
 
+“设置 → 模型与 API”支持为每家服务单选或多选模型，并在线增加、删除自定义
+候选模型。多选时先按勾选顺序尝试同一服务的模型，再降级到下一家服务。Gemini
+内置 `gemini-3.6-flash`、`gemini-3.5-flash` 和 `gemini-2.5-pro`。
+
 ## 快速开始
 
 需要 Node.js 20.18 或更高版本。
@@ -164,7 +168,8 @@ OPENROUTER_API_KEY=...
 - 硅基流动 Qwen：`Qwen/Qwen3.5-4B`
 - OpenRouter：`openrouter/free`
 
-可以通过对应的 `*_MODEL` 环境变量覆盖默认模型。本地服务也会读取常见的
+可以通过对应的 `*_MODEL` 环境变量覆盖默认模型；多个模型使用英文逗号分隔，
+候选目录由对应的 `*_MODELS` 保存。本地服务也会读取常见的
 `HTTPS_PROXY`、`HTTP_PROXY` 和 `ALL_PROXY` 代理环境变量。
 
 ## 使用流程

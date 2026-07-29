@@ -142,6 +142,20 @@ function cleanSetting(value, label, { required = false, max = 1000 } = {}) {
   return cleaned;
 }
 
+function cleanModelList(value, label) {
+  if (!Array.isArray(value) || !value.length) {
+    throw new Error(`请至少选择一个 ${label}。`);
+  }
+  if (value.length > 20) throw new Error(`${label} 数量过多。`);
+  const models = value.map((model) =>
+    cleanSetting(model, label, { required: true, max: 200 }),
+  );
+  if (models.some((model) => model.includes(","))) {
+    throw new Error(`${label} 不能包含英文逗号。`);
+  }
+  return [...new Set(models)];
+}
+
 export function buildSettingsUpdates(payload = {}, env = process.env) {
   if (!payload.providers || typeof payload.providers !== "object") {
     throw new Error("API 配置格式无效。");
@@ -156,11 +170,22 @@ export function buildSettingsUpdates(payload = {}, env = process.env) {
       setting.apiKey,
       `${provider.label} API Key`,
     );
-    const model = cleanSetting(
-      setting.model,
+    const models = cleanModelList(
+      Array.isArray(setting.models) ? setting.models : [setting.model],
       `${provider.label} 模型`,
-      { required: true, max: 200 },
     );
+    const modelValue = models.join(",");
+    let availableModels = null;
+    if (Array.isArray(setting.availableModels)) {
+      availableModels = cleanModelList(
+        [
+          ...(provider.defaultModels || [provider.defaultModel]),
+          ...setting.availableModels,
+          ...models,
+        ],
+        `${provider.label} 候选模型`,
+      );
+    }
 
     if (apiKey && isPlaceholderKey(apiKey)) {
       throw new Error(`${provider.label} API Key 仍是占位符，请填写真实 Key。`);
@@ -174,9 +199,12 @@ export function buildSettingsUpdates(payload = {}, env = process.env) {
     const hasStoredKey = !isPlaceholderKey(env[provider.keyName]);
     if (
       (setting.clearKey !== true && (apiKey || hasStoredKey)) ||
-      model !== (env[provider.modelName] || provider.defaultModel)
+      modelValue !== (env[provider.modelName] || provider.defaultModel)
     ) {
-      updates[provider.modelName] = model;
+      updates[provider.modelName] = modelValue;
+    }
+    if (availableModels) {
+      updates[provider.modelsName] = availableModels.join(",");
     }
   }
   return updates;

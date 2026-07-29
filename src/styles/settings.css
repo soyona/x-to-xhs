@@ -526,6 +526,8 @@
 }
 
 .settings-provider-manage:focus-visible,
+.settings-model-option button:focus-visible,
+.settings-model-add button:focus-visible,
 .settings-replace-key button:focus-visible,
 .settings-provider-danger button:focus-visible {
   outline: 2px solid rgba(239, 75, 67, 0.35);
@@ -560,6 +562,75 @@
   font-size: 9px;
   font-weight: 500;
   line-height: 1.4;
+}
+
+.settings-model-field {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: #555c66;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.settings-model-list {
+  display: grid;
+  gap: 5px;
+}
+
+.settings-model-option {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #dfe2e6;
+  border-radius: 7px;
+  padding: 5px 8px;
+  background: #fafbfc;
+}
+
+.settings-provider-details .settings-model-option label {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 7px;
+}
+
+.settings-model-option label span {
+  overflow-wrap: anywhere;
+}
+
+.settings-model-option small {
+  color: #8a9099;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.settings-model-option button,
+.settings-model-add button {
+  min-height: 30px;
+  flex: 0 0 auto;
+  border: 1px solid #d4d7dc;
+  border-radius: 6px;
+  padding: 0 9px;
+  color: #555c66;
+  background: #fff;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.settings-model-option button:hover,
+.settings-model-add button:hover {
+  border-color: #bec3ca;
+  color: var(--ink);
+}
+
+.settings-model-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
 }
 
 .settings-provider-details input[type="text"],

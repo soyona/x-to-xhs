@@ -453,8 +453,14 @@
   }
 
   .settings-replace-key button,
+  .settings-model-option button,
+  .settings-model-add button,
   .settings-provider-danger button {
     min-height: 44px;
+  }
+
+  .settings-model-add {
+    grid-template-columns: 1fr;
   }
 
   .settings-provider-danger {

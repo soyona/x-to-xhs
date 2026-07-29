@@ -46,6 +46,58 @@ test("占位符 API Key 不会被误判为已配置", () => {
   );
 });
 
+test("Gemini 提供三个内置候选并支持有序多选", () => {
+  const [gemini] = getProviderStatus({
+    GEMINI_MODEL: "gemini-3.6-flash,gemini-2.5-pro",
+  });
+
+  assert.deepEqual(gemini.models, [
+    "gemini-3.6-flash",
+    "gemini-2.5-pro",
+  ]);
+  assert.deepEqual(gemini.defaultModels, [
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-2.5-pro",
+  ]);
+  assert.deepEqual(gemini.availableModels, gemini.defaultModels);
+});
+
+test("同一服务勾选多个模型时按顺序降级", async () => {
+  const calledModels = [];
+  const result = await generateWithFallback({
+    prompt: "完整提示词",
+    env: {
+      GROQ_API_KEY: "groq-key",
+      GROQ_MODEL: "qwen/primary,qwen/fallback",
+      GROQ_MODELS: "qwen/primary,qwen/fallback",
+    },
+    fetchImpl: async (_url, options) => {
+      const model = JSON.parse(options.body).model;
+      calledModels.push(model);
+      if (model === "qwen/primary") {
+        return jsonResponse({ error: { message: "temporary error" } }, 503);
+      }
+      return jsonResponse({
+        model,
+        choices: [{ message: { content: "# 后备模型草稿" } }],
+      });
+    },
+  });
+
+  assert.equal(result.provider, "groq");
+  assert.deepEqual(calledModels, ["qwen/primary", "qwen/fallback"]);
+  assert.deepEqual(
+    result.attempts
+      .filter(({ provider }) => provider === "groq")
+      .map(({ model, status }) => ({ model, status })),
+    [
+      { model: "qwen/primary", status: "failed" },
+      { model: "qwen/fallback", status: "success" },
+    ],
+  );
+});
+
 test("Gemini 成功时不调用后备服务", async () => {
   const calls = [];
   const result = await generateWithFallback({
