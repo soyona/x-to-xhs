@@ -612,7 +612,12 @@ const server = createServer(async (request, response) => {
       error?.name === "TimeoutError"
         ? "请求超时，请稍后重试。"
         : error?.message || "发生未知错误。";
-    sendJson(response, 400, { error: message });
+    sendJson(response, 400, {
+      error: message,
+      ...(Array.isArray(error?.attempts)
+        ? { attempts: error.attempts }
+        : {}),
+    });
   }
 });
 

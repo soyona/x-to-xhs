@@ -116,7 +116,9 @@ X 正文、单条帖子 URL 或自主编写内容
 4. 硅基流动 Qwen
 5. OpenRouter Free
 
-服务端会跳过没有配置 API Key 的服务。遇到限流、额度耗尽、超时或调用错误时，会自动尝试下一家，并向界面返回不包含密钥的安全错误摘要。
+Gemini 支持按顺序配置多个 API Key；当前 Key 限流或额度耗尽后，会先尝试下一个
+Gemini Key。所有 Gemini Key 都不可用后，才进入原有的模型降级链路。服务端会跳过
+没有配置 API Key 的服务，并向界面返回不包含密钥的安全错误摘要。
 
 ## 快速开始
 
@@ -147,7 +149,7 @@ npm run dev
 也可以直接编辑本地 `.env`：
 
 ```dotenv
-GEMINI_API_KEY=...
+GEMINI_API_KEY=key_a,key_b
 GROQ_API_KEY=...
 ZHIPU_API_KEY=...
 SILICONFLOW_API_KEY=...

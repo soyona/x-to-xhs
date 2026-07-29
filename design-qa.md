@@ -1,86 +1,83 @@
-# Design QA
+# Design QA: 模型与 API 方案 3
 
-- source visual truth path: `/Users/kanglei/.codex/generated_images/019fa17e-5381-70f3-8184-8226a7e4cde3/call_oSvZRKDbQFJyulaHQjhLjsKn.png`
-- implementation screenshot path: `/Users/kanglei/.codex/visualizations/2026/07/27/019fa17e-5381-70f3-8184-8226a7e4cde3/implementation-empty-workflow-desktop.png`
-- mobile screenshot path: `/Users/kanglei/.codex/visualizations/2026/07/27/019fa17e-5381-70f3-8184-8226a7e4cde3/implementation-empty-workflow-mobile.png`
-- combined comparison path: `/Users/kanglei/.codex/visualizations/2026/07/27/019fa17e-5381-70f3-8184-8226a7e4cde3/design-qa-empty-workflow-comparison.png`
-- desktop viewport: `1440 x 1024` CSS px at device scale factor 1
-- source pixels: `1487 x 1058`; normalized to `1440 x 1024` for the combined comparison
-- implementation pixels: `1440 x 1024`
-- mobile viewport and pixels: `390 x 844` at device scale factor 1
-- state: first-load empty state with no source content and no generated draft
+- Source visual truth: `/Users/kanglei/.codex/generated_images/019fae14-5edc-74f0-accc-ee36d003e377/call_TIE0Cw49rNcf3QaoalZKkbOQ.png`
+- Implementation screenshot: `/private/tmp/x-to-xhs-option3-desktop-final.jpg`
+- Full-view comparison: `/private/tmp/x-to-xhs-option3-comparison.jpg`
+- Focused comparison: `/private/tmp/x-to-xhs-option3-focus-comparison.jpg`
+- Viewport: 1280 × 720 CSS px
+- Source pixels: 1536 × 919, normalized to 1279 × 720
+- Implementation pixels: 1280 × 720
+- Density normalization: both comparison inputs normalized to 720 px height at 1× screenshot density
+- State: 设置 → 模型与 API；Gemini 已配置并展开
 
-## Full-view comparison evidence
+## Full-view comparison
 
-The combined comparison places the selected generated design on the left and
-the browser-rendered implementation on the right at the same normalized size.
-The implementation reproduces the selected direction's two-level hierarchy:
-four primary stages across the document surface, followed by the seven-step
-publishing route branching from “分步复制到小红书”.
+The implementation preserves the selected direction's progressive disclosure:
+provider summaries remain compact, only one provider is expanded, persistent
+footer actions remain visible, and Key management is secondary to configuration.
 
-The live product intentionally retains its current source-panel controls,
-provider list, top-bar actions, footer copy, and two-column proportions rather
-than copying outdated details synthesized by the generated reference. This is
-an expected product constraint, not design drift in the requested empty state.
+Intentional product-data deviations:
 
-## Focused comparison evidence
+- All five real providers remain available; the concept image only showed four.
+- Current model values are preserved instead of the concept's `未设置` placeholders.
+- Model remains a free-text input because the existing product accepts provider
+  model identifiers rather than a fixed select list.
+- The generated mock's duplicate expanded-row chevrons are replaced with one
+  labelled manage button and one rotating chevron.
 
-A separate crop was not needed. At `1440 x 1024`, the full-view comparison keeps
-the empty-state headline, four stage labels and descriptions, connectors,
-seven step numbers, icons, and labels legible enough for direct comparison.
+## Focused comparison
+
+The Gemini region matches the selected hierarchy: saved-Key status and model
+share the first row, multi-Key help remains below the Key status, replacement is
+a secondary action, and local removal is separated by a divider with explicit
+scope copy. The focused comparison is readable without an additional crop.
 
 ## Required fidelity surfaces
 
-- Fonts and typography: the existing sans-serif control stack and Songti-style
-  editorial headline are preserved. Monospace step numbers, compact supporting
-  copy, weights, wrapping, and hierarchy closely match the selected reference.
-- Spacing and layout rhythm: the right panel retains generous whitespace, a
-  centered `980px` maximum flow width, circular stage anchors, restrained
-  connectors, and a compact lower route without introducing seven heavy cards.
-- Colors and visual tokens: existing ink, muted gray, warm paper grid, coral
-  accent, border, and surface tokens are reused. No gradients or extra shadows
-  were introduced.
-- Image quality and asset fidelity: the selected screen contains no raster
-  content assets. Interface icons use the project's installed Lucide icon
-  library and remain sharp at both tested sizes.
-- Copy and content: the four stage labels and all seven product-authoritative
-  publishing steps are present. “复核内容后手动发布” avoids implying automatic
-  publishing.
-- Responsive behavior: at `390 x 844`, the app keeps two fixed-height panels,
-  the whole document remains viewport-bound, and the flow reflows to a compact
-  two-column primary map plus a four-column publishing grid inside the existing
-  internal scroll surface.
-- Accessibility: the flow uses ordered lists and descriptive region labels;
-  decorative icons and connectors are hidden from assistive technology.
+- Fonts and typography: existing application font stack, compact weight scale,
+  label hierarchy, truncation, and line height are preserved.
+- Spacing and layout rhythm: provider summary height, two-column detail grid,
+  divider rhythm, radii, and footer separation match the selected direction.
+- Colors and visual tokens: existing red accent, green configured badge,
+  pale-red danger state, borders, and surfaces are reused without a new palette.
+- Image quality and assets: the target contains no raster product assets.
+  The disclosure icon uses the project's existing Lucide icon library.
+- Copy and content: local-only removal scope is explicit; no Key value or suffix
+  is returned or rendered.
+- Responsiveness: 390 × 844 verification has no horizontal overflow, keeps the
+  page itself fixed, and provides 44 px manage and destructive-action targets.
+- Accessibility: manage buttons expose `aria-expanded` and `aria-controls`;
+  visible text labels remain on every destructive action; focus indicators are
+  retained.
 
-## Interaction and runtime evidence
+## Interaction verification
 
-- Source input accepts text and enables “生成小红书长文”.
-- Clearing the source restores the disabled button and the exact first-load
-  state.
-- No generation request was sent during UI verification.
+- Provider manage controls switch the single expanded section.
+- Configured providers can enter and cancel replacement mode.
+- Unconfigured providers expose an empty password input.
+- Local removal enters a staged state and can be undone before saving.
 - Browser console errors and warnings: none.
-- Desktop `documentElement.scrollHeight === innerHeight` and
-  `documentElement.scrollWidth === innerWidth`: passed at `1440 x 1024`.
-- Mobile `documentElement.scrollHeight === innerHeight` and
-  `documentElement.scrollWidth === innerWidth`: passed at `390 x 844`.
-
-## Findings
-
-No actionable P0, P1, or P2 visual differences remain. The live implementation
-is faithful to the selected information hierarchy and visual language while
-preserving current application controls and product constraints.
 
 ## Comparison history
 
-- Initial implementation comparison: no actionable P0, P1, or P2 issue was
-  found, so no blocking visual fix loop was required.
-- Responsive review: the desktop seven-column route was intentionally reflowed
-  for the narrow panel instead of introducing page-level horizontal overflow.
+### Iteration 1
+
+- Finding: P1 — expanded details overflowed a stretched provider grid row and
+  the local-removal section was clipped.
+- Fix: set provider-list rows to `max-content` and align grid content to the top,
+  allowing the list itself to scroll.
+- Post-fix evidence: `/private/tmp/x-to-xhs-option3-implementation-2.jpg`.
+
+### Iteration 2
+
+- No remaining P0, P1, or P2 findings.
+- Final evidence: `/private/tmp/x-to-xhs-option3-desktop-final.jpg`,
+  `/private/tmp/x-to-xhs-option3-mobile.jpg`, and
+  `/private/tmp/x-to-xhs-option3-focus-comparison.jpg`.
 
 ## Follow-up polish
 
-- P3: if the mobile product later gives the `02` panel more vertical space, the
-  four primary stages could remain on one row at tablet widths.
+- P3: the real application intentionally retains its denser small-text scale,
+  which is slightly more compact than the generated concept.
 
 final result: passed

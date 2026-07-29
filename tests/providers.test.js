@@ -61,6 +61,11 @@ test("Gemini 成功时不调用后备服务", async () => {
       calls.push({ url, options });
       return jsonResponse({
         candidates: [{ content: { parts: [{ text: "# Gemini 草稿" }] } }],
+        usageMetadata: {
+          promptTokenCount: 1_200,
+          candidatesTokenCount: 800,
+          totalTokenCount: 2_000,
+        },
       });
     },
   });
@@ -68,9 +73,158 @@ test("Gemini 成功时不调用后备服务", async () => {
   assert.equal(result.provider, "gemini");
   assert.equal(result.draft, "# Gemini 草稿");
   assert.equal(result.attempts.length, 1);
+  assert.deepEqual(result.usage, {
+    input: 1_200,
+    output: 800,
+    total: 2_000,
+  });
   assert.equal(calls.length, 1);
   assert.match(calls[0].url, /generativelanguage\.googleapis\.com/);
   assert.equal(calls[0].options.headers["x-goog-api-key"], "gemini-key");
+});
+
+test("Gemini 当前 Key 额度用尽后按配置顺序尝试下一个 Key", async () => {
+  const keys = [];
+  const result = await generateWithFallback({
+    prompt: "完整提示词",
+    env: {
+      GEMINI_API_KEY: "gemini-key-a, gemini-key-b",
+      GROQ_API_KEY: "groq-key",
+    },
+    fetchImpl: async (_url, options) => {
+      keys.push(options.headers["x-goog-api-key"]);
+      if (keys.length === 1) {
+        return jsonResponse(
+          { error: { message: "RESOURCE_EXHAUSTED" } },
+          429,
+        );
+      }
+      return jsonResponse({
+        candidates: [{ content: { parts: [{ text: "# Gemini B 草稿" }] } }],
+      });
+    },
+  });
+
+  assert.equal(result.provider, "gemini");
+  assert.equal(result.draft, "# Gemini B 草稿");
+  assert.deepEqual(keys, ["gemini-key-a", "gemini-key-b"]);
+  assert.deepEqual(
+    result.attempts.map(
+      ({ provider, status, reason, keyIndex, keyCount }) => ({
+        provider,
+        status,
+        reason,
+        keyIndex,
+        keyCount,
+      }),
+    ),
+    [
+      {
+        provider: "gemini",
+        status: "failed",
+        reason: "quota",
+        keyIndex: 1,
+        keyCount: 2,
+      },
+      {
+        provider: "gemini",
+        status: "success",
+        reason: null,
+        keyIndex: 2,
+        keyCount: 2,
+      },
+    ],
+  );
+});
+
+test("Gemini 当前 Key 无效时继续尝试下一个 Key", async () => {
+  const keys = [];
+  const result = await generateWithFallback({
+    prompt: "完整提示词",
+    env: {
+      GEMINI_API_KEY: "gemini-key-a,gemini-key-b",
+      GROQ_API_KEY: "groq-key",
+    },
+    fetchImpl: async (_url, options) => {
+      keys.push(options.headers["x-goog-api-key"]);
+      if (keys.length === 1) {
+        return jsonResponse({ error: { message: "invalid key" } }, 401);
+      }
+      return jsonResponse({
+        candidates: [{ content: { parts: [{ text: "# Gemini B 草稿" }] } }],
+      });
+    },
+  });
+
+  assert.equal(result.provider, "gemini");
+  assert.deepEqual(keys, ["gemini-key-a", "gemini-key-b"]);
+  assert.equal(result.attempts[0].reason, "auth");
+  assert.equal(result.attempts[1].status, "success");
+});
+
+test("Gemini 所有 Key 额度用尽后才切换到 Groq Qwen", async () => {
+  const calls = [];
+  const result = await generateWithFallback({
+    prompt: "完整提示词",
+    env: {
+      GEMINI_API_KEY: "gemini-key-a,gemini-key-b",
+      GROQ_API_KEY: "groq-key",
+    },
+    fetchImpl: async (url, options) => {
+      calls.push({ url, key: options.headers["x-goog-api-key"] });
+      if (calls.length <= 2) {
+        return jsonResponse({ error: { message: "quota exceeded" } }, 429);
+      }
+      return jsonResponse({
+        model: "qwen/qwen3.6-27b",
+        choices: [{ message: { content: "# Groq 草稿" } }],
+      });
+    },
+  });
+
+  assert.equal(result.provider, "groq");
+  assert.deepEqual(
+    calls.slice(0, 2).map(({ key }) => key),
+    ["gemini-key-a", "gemini-key-b"],
+  );
+  assert.match(calls[2].url, /api\.groq\.com/);
+  assert.deepEqual(
+    result.attempts.map(({ provider, status, keyIndex }) => ({
+      provider,
+      status,
+      keyIndex,
+    })),
+    [
+      { provider: "gemini", status: "failed", keyIndex: 1 },
+      { provider: "gemini", status: "failed", keyIndex: 2 },
+      { provider: "groq", status: "success", keyIndex: null },
+    ],
+  );
+});
+
+test("Gemini 非额度错误不尝试下一个 Key，直接沿用模型降级", async () => {
+  const calls = [];
+  const result = await generateWithFallback({
+    prompt: "完整提示词",
+    env: {
+      GEMINI_API_KEY: "gemini-key-a,gemini-key-b",
+      GROQ_API_KEY: "groq-key",
+    },
+    fetchImpl: async (url, options) => {
+      calls.push({ url, key: options.headers["x-goog-api-key"] });
+      if (calls.length === 1) {
+        return jsonResponse({ error: { message: "temporary error" } }, 503);
+      }
+      return jsonResponse({
+        model: "qwen/qwen3.6-27b",
+        choices: [{ message: { content: "# Groq 草稿" } }],
+      });
+    },
+  });
+
+  assert.equal(result.provider, "groq");
+  assert.deepEqual(calls.map(({ key }) => key), ["gemini-key-a", undefined]);
+  assert.match(calls[1].url, /api\.groq\.com/);
 });
 
 test("Gemini 限流后自动切换到 Groq Qwen", async () => {
@@ -92,12 +246,22 @@ test("Gemini 限流后自动切换到 Groq Qwen", async () => {
       return jsonResponse({
         model: "qwen/qwen3.6-27b",
         choices: [{ message: { content: "# Groq 草稿" } }],
+        usage: {
+          prompt_tokens: 900,
+          completion_tokens: 600,
+          total_tokens: 1_500,
+        },
       });
     },
   });
 
   assert.equal(result.provider, "groq");
   assert.equal(result.draft, "# Groq 草稿");
+  assert.deepEqual(result.usage, {
+    input: 900,
+    output: 600,
+    total: 1_500,
+  });
   assert.deepEqual(
     result.attempts.map(({ provider, status }) => ({ provider, status })),
     [
@@ -130,6 +294,7 @@ test("调用方可以指定跳过某个模型", async () => {
   });
 
   assert.equal(result.provider, "groq");
+  assert.equal(result.usage, null);
   assert.equal(calls.length, 1);
   assert.deepEqual(
     result.attempts.map(({ provider, status }) => ({ provider, status })),
@@ -221,7 +386,56 @@ test("前四家失败后由 OpenRouter Free 兜底并返回实际模型", async 
   assert.equal(result.provider, "openrouter");
   assert.equal(result.model, "vendor/free-model");
   assert.equal(result.attempts.at(-1).status, "success");
+  assert.equal(
+    result.attempts.filter((attempt) => attempt.status === "failed").length,
+    4,
+  );
   assert.equal(callCount, 5);
+});
+
+test("所有服务失败时返回脱敏的逐次尝试详情", async () => {
+  let caught;
+  try {
+    await generateWithFallback({
+      prompt: "完整提示词",
+      env: {
+        GEMINI_API_KEY: "gemini-key-a,gemini-key-b",
+        GROQ_API_KEY: "groq-key",
+      },
+      fetchImpl: async () =>
+        jsonResponse({ error: { message: "quota exceeded" } }, 429),
+    });
+  } catch (error) {
+    caught = error;
+  }
+
+  assert.ok(caught);
+  assert.equal(caught.attempts.length, 6);
+  assert.deepEqual(
+    caught.attempts
+      .filter((attempt) => attempt.provider === "gemini")
+      .map(({ status, reason, keyIndex, keyCount }) => ({
+        status,
+        reason,
+        keyIndex,
+        keyCount,
+      })),
+    [
+      {
+        status: "failed",
+        reason: "quota",
+        keyIndex: 1,
+        keyCount: 2,
+      },
+      {
+        status: "failed",
+        reason: "quota",
+        keyIndex: 2,
+        keyCount: 2,
+      },
+    ],
+  );
+  assert.doesNotMatch(JSON.stringify(caught.attempts), /gemini-key|groq-key/);
 });
 
 test("未配置任何 API Key 时给出明确提示且不发请求", async () => {

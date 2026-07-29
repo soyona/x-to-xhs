@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { GenerationDetails } from "./GenerationDetails";
 
 async function requestJson(path, options) {
   const response = await fetch(path, options);
@@ -193,6 +194,11 @@ export function HistoryDialog({
                       {record.generation?.providerLabel
                         ? ` · ${record.generation.providerLabel}`
                         : ""}
+                      {record.generation?.attempts?.some(
+                        (attempt) => attempt.status === "failed",
+                      )
+                        ? " · 降级成功"
+                        : ""}
                     </small>
                   </button>
                 ))
@@ -261,6 +267,11 @@ export function HistoryDialog({
                   </span>
                   <span>{activeVersion.model || "模型版本未知"}</span>
                 </div>
+
+                <GenerationDetails
+                  run={activeVersion}
+                  placement="history"
+                />
 
                 <pre className="history-draft">{activeVersion.draft}</pre>
 

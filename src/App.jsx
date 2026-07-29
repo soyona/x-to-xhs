@@ -10,6 +10,7 @@ import { AlertIcon, ArrowIcon } from "./icons";
 import { HistoryDialog } from "./HistoryDialog";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { PublishWorkflow } from "./PublishWorkflow";
+import { StatusBar } from "./StatusBar";
 import { replaceWorkflowSection } from "./workflowDraft";
 import { splitXiaohongshuDraft } from "./xiaohongshuPublish";
 import {
@@ -30,7 +31,11 @@ async function postJson(path, body) {
     body: JSON.stringify(body),
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "请求失败，请重试。");
+  if (!response.ok) {
+    const error = new Error(data.error || "请求失败，请重试。");
+    if (Array.isArray(data.attempts)) error.attempts = data.attempts;
+    throw error;
+  }
   return data;
 }
 
@@ -119,6 +124,7 @@ export default function App() {
         }
       : null,
   );
+  const [latestRun, setLatestRun] = useState(null);
   const [sourceModeOverride, setSourceModeOverride] = useState(
     prototypeMode ? SOURCE_MODES.X_CONTENT : null,
   );
@@ -193,6 +199,7 @@ export default function App() {
     setStatus("generating");
     setError("");
     setGeneration(null);
+    setLatestRun(null);
     setDraftHistory([]);
     setHistoryNotice("");
     try {
@@ -217,6 +224,7 @@ export default function App() {
           });
       setDraft(result.draft);
       setGeneration(result);
+      setLatestRun(result);
       setSourceModeOverride(result.source?.mode || sourceMode);
       setActiveHistory(
         result.historyId
@@ -228,6 +236,12 @@ export default function App() {
       setWorkflowId((current) => current + 1);
       setStatus("done");
     } catch (generationError) {
+      if (Array.isArray(generationError.attempts)) {
+        setLatestRun({
+          attempts: generationError.attempts,
+          failed: true,
+        });
+      }
       setError(generationError.message);
       setStatus("error");
     }
@@ -264,6 +278,7 @@ export default function App() {
     if (!previous || isWorking) return;
     setDraft(previous.draft);
     setGeneration(previous.generation);
+    setLatestRun(previous.generation);
     setDraftHistory((history) => history.slice(0, -1));
     setError("");
     setStatus("done");
@@ -280,22 +295,26 @@ export default function App() {
     if (!draft || isWorking) {
       throw new Error("当前整稿处理中，请稍后再试。");
     }
-    if (prototypeMode) {
-      return new Promise((resolve) => {
-        window.setTimeout(() => resolve(prototypeSectionResult(section)), 520);
-      });
-    }
-    return postJson("/api/generate-section", {
-      section,
-      input,
-      sourceMode,
-      source: activeSource,
-      draft,
-      currentValue,
-      previousCandidates,
-      rejectionReasons,
-      preferences: contentPreferences,
-    });
+    const result = prototypeMode
+      ? await new Promise((resolve) => {
+          window.setTimeout(
+            () => resolve(prototypeSectionResult(section)),
+            520,
+          );
+        })
+      : await postJson("/api/generate-section", {
+          section,
+          input,
+          sourceMode,
+          source: activeSource,
+          draft,
+          currentValue,
+          previousCandidates,
+          rejectionReasons,
+          preferences: contentPreferences,
+        });
+    setLatestRun(result);
+    return result;
   }
 
   function applyWorkflowSection(section, value) {
@@ -326,14 +345,17 @@ export default function App() {
     setInput(record.source?.content || "");
     setSourceModeOverride(restoredSourceMode);
     setDraft(version.draft);
-    setGeneration({
+    const restoredGeneration = {
       provider: version.provider,
       providerLabel:
         version.providerLabel || version.provider || "历史记录",
       model: version.model || "模型未知",
-      attempts: [],
+      usage: version.usage || null,
+      attempts: Array.isArray(version.attempts) ? version.attempts : [],
       source: restoredSource,
-    });
+    };
+    setGeneration(restoredGeneration);
+    setLatestRun(restoredGeneration);
     setActiveHistory({
       id: record.id,
       version: record.currentVersion,
@@ -390,7 +412,6 @@ export default function App() {
           sourceMode === SOURCE_MODES.X_URL
         ? "粘贴 X 原文或原帖链接；粘贴原文时，请在末尾附上原帖链接。"
         : "请先选择内容来源，再粘贴或输入内容。";
-
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -436,7 +457,7 @@ export default function App() {
           <div className="panel-header">
             <div className="panel-title">
               <span className="step-number">01</span>
-              <h1 id="source-heading">粘贴 X 内容</h1>
+              <h1 id="source-heading">原始素材</h1>
             </div>
           </div>
 
@@ -532,45 +553,6 @@ export default function App() {
               </ol>
             </div>
 
-            <div className="provider-chain" aria-label="模型调用顺序">
-              <strong>自动切换顺序</strong>
-              <div>
-                {health.providers.length ? (
-                  health.providers.map((provider, index) => (
-                    <span className="provider-step" key={provider.id}>
-                      {index > 0 && <b aria-hidden="true">→</b>}
-                      <span
-                        className={
-                          provider.configured ? "configured" : "unconfigured"
-                        }
-                      >
-                        {provider.label}
-                      </span>
-                    </span>
-                  ))
-                ) : (
-                  <span>
-                    Gemini → Groq Qwen → 智谱 GLM → 硅基流动 Qwen →
-                    OpenRouter Free
-                  </span>
-                )}
-              </div>
-              {generation?.attempts && (
-                <p className="attempt-summary" role="status">
-                  {generation.attempts
-                    .map((attempt) => {
-                      if (attempt.status === "success") {
-                        return `${attempt.label} 成功`;
-                      }
-                      if (attempt.status === "skipped") {
-                        return `${attempt.label} 未配置`;
-                      }
-                      return `${attempt.label} 失败`;
-                    })
-                    .join(" → ")}
-                </p>
-              )}
-            </div>
           </div>
         </section>
 
@@ -629,14 +611,12 @@ export default function App() {
         </section>
       </main>
 
-      <footer className="statusbar">
-        <span>
-          {generation
-            ? `服务：${generation.providerLabel} · 模型：${generation.model}`
-            : "默认：Gemini · 备用：Groq Qwen / 智谱 GLM / 硅基流动 Qwen · 兜底：OpenRouter Free"}
-        </span>
-        <span className="secure-note">API Key 仅保留在本地服务端</span>
-      </footer>
+      <StatusBar
+        health={health}
+        isGenerating={isGenerating}
+        prototypeMode={prototypeMode}
+        run={latestRun || generation}
+      />
 
       <ApiSettingsDialog
         open={settingsOpen}

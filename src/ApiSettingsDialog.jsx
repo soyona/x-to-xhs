@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   CONTENT_PREFERENCE_FIELDS,
   DEFAULT_CONTENT_PREFERENCES,
@@ -304,6 +305,8 @@ export function ApiSettingsDialog({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [preferenceMessage, setPreferenceMessage] = useState("");
+  const [expandedProviderId, setExpandedProviderId] = useState(null);
+  const [editingKeyProviderId, setEditingKeyProviderId] = useState(null);
 
   useEffect(() => {
     if (!open) return;
@@ -325,6 +328,8 @@ export function ApiSettingsDialog({
     setSaving(false);
     setMessage("");
     setPreferenceMessage("");
+    setExpandedProviderId(health.providers[0]?.id || null);
+    setEditingKeyProviderId(null);
   }, [health.providers, initialTab, open]);
 
   useEffect(() => {
@@ -572,8 +577,8 @@ export function ApiSettingsDialog({
         ) : (
           <form className="settings-form" onSubmit={submitProviders}>
             <p className="settings-security-note">
-              Key 仅保存到本机服务端的 .env 文件；页面不会读取或回显已保存的完整
-              Key。
+              Key 仅保存到本机服务端的 .env 文件；页面不会读取或回显完整 Key。
+              移除只会删除本机配置，不会停用供应商端 Key。
             </p>
 
             <div className="settings-provider-list">
@@ -583,74 +588,205 @@ export function ApiSettingsDialog({
                   clearKey: false,
                   model: provider.model,
                 };
+                const isExpanded = expandedProviderId === provider.id;
+                const hasNewKey = Boolean(value.apiKey.trim());
+                const isEditingKey =
+                  editingKeyProviderId === provider.id ||
+                  !provider.configured ||
+                  hasNewKey;
+                const statusLabel = value.clearKey
+                  ? "待移除"
+                  : hasNewKey
+                    ? "待保存"
+                    : provider.configured
+                      ? "已配置"
+                      : "未配置";
+                const statusClass =
+                  value.clearKey || (!provider.configured && !hasNewKey)
+                    ? "missing"
+                    : "ready";
+                const detailsId = `${provider.id}-settings-details`;
                 return (
-                  <fieldset className="settings-provider" key={provider.id}>
-                    <legend>
-                      <span>{index + 1}</span>
-                      {provider.label}
-                      <b className={provider.configured ? "ready" : "missing"}>
-                        {provider.configured ? "已配置" : "未配置"}
-                      </b>
-                    </legend>
-
-                    <label htmlFor={`${provider.id}-api-key`}>
-                      API Key
-                      <input
-                        id={`${provider.id}-api-key`}
-                        type="password"
-                        value={value.apiKey}
-                        onChange={(event) =>
-                          updateProvider(provider.id, {
-                            apiKey: event.target.value,
-                            clearKey: false,
-                          })
+                  <section
+                    className={`settings-provider${
+                      isExpanded ? " expanded" : ""
+                    }`}
+                    key={provider.id}
+                  >
+                    <div className="settings-provider-summary">
+                      <div className="settings-provider-identity">
+                        <span>{index + 1}</span>
+                        <h3>{provider.label}</h3>
+                        <b className={statusClass}>{statusLabel}</b>
+                      </div>
+                      <span
+                        className="settings-provider-model-summary"
+                        title={value.model}
+                      >
+                        模型：{value.model || "未设置"}
+                      </span>
+                      <button
+                        className="settings-provider-manage"
+                        type="button"
+                        aria-expanded={isExpanded}
+                        aria-controls={detailsId}
+                        aria-label={`${isExpanded ? "收起" : "管理"} ${
+                          provider.label
+                        }`}
+                        onClick={() =>
+                          setExpandedProviderId((current) =>
+                            current === provider.id ? null : provider.id,
+                          )
                         }
-                        placeholder={
-                          provider.configured
-                            ? "已保存；留空保持不变"
-                            : "粘贴真实 API Key"
-                        }
-                        autoComplete="off"
-                        spellCheck="false"
-                        disabled={saving || value.clearKey}
-                      />
-                    </label>
-
-                    <label htmlFor={`${provider.id}-model`}>
-                      模型
-                      <input
-                        id={`${provider.id}-model`}
-                        type="text"
-                        value={value.model}
-                        onChange={(event) =>
-                          updateProvider(provider.id, {
-                            model: event.target.value,
-                          })
-                        }
-                        autoComplete="off"
-                        spellCheck="false"
                         disabled={saving}
-                        required
-                      />
-                    </label>
-
-                    {provider.configured && (
-                      <label className="settings-clear-key">
-                        <input
-                          type="checkbox"
-                          checked={value.clearKey}
-                          onChange={(event) =>
-                            updateProvider(provider.id, {
-                              apiKey: "",
-                              clearKey: event.target.checked,
-                            })
-                          }
-                          disabled={saving}
+                      >
+                        管理
+                        <ChevronDown
+                          aria-hidden="true"
+                          className={isExpanded ? "expanded" : ""}
                         />
-                        清除已保存的 Key
-                      </label>
+                      </button>
+                    </div>
+
+                    {isExpanded && (
+                      <div
+                        className="settings-provider-details"
+                        id={detailsId}
+                      >
+                        <div className="settings-provider-fields">
+                          <label htmlFor={`${provider.id}-api-key`}>
+                            {provider.id === "gemini"
+                              ? "API Keys"
+                              : "API Key"}
+                            {isEditingKey ? (
+                              <input
+                                id={`${provider.id}-api-key`}
+                                type="password"
+                                value={value.apiKey}
+                                onChange={(event) =>
+                                  updateProvider(provider.id, {
+                                    apiKey: event.target.value,
+                                    clearKey: false,
+                                  })
+                                }
+                                placeholder={
+                                  provider.id === "gemini"
+                                    ? "按顺序粘贴，多个 Key 用英文逗号分隔"
+                                    : provider.configured
+                                      ? "粘贴新的 API Key"
+                                      : "粘贴真实 API Key"
+                                }
+                                autoComplete="off"
+                                spellCheck="false"
+                                disabled={saving || value.clearKey}
+                              />
+                            ) : (
+                              <span className="settings-saved-key">
+                                已安全保存到本机
+                              </span>
+                            )}
+                            {provider.id === "gemini" && (
+                              <small>
+                                支持多个 Key，以英文逗号分隔；额度用尽后按顺序切换。
+                              </small>
+                            )}
+                          </label>
+
+                          <label htmlFor={`${provider.id}-model`}>
+                            模型
+                            <input
+                              id={`${provider.id}-model`}
+                              type="text"
+                              value={value.model}
+                              onChange={(event) =>
+                                updateProvider(provider.id, {
+                                  model: event.target.value,
+                                })
+                              }
+                              autoComplete="off"
+                              spellCheck="false"
+                              disabled={saving}
+                              required
+                            />
+                          </label>
+                        </div>
+
+                        {provider.configured && !value.clearKey && (
+                          <div className="settings-replace-key">
+                            {isEditingKey ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateProvider(provider.id, { apiKey: "" });
+                                  setEditingKeyProviderId(null);
+                                }}
+                                disabled={saving}
+                              >
+                                取消更换
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditingKeyProviderId(provider.id)
+                                }
+                                disabled={saving}
+                              >
+                                更换 Key
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {provider.configured && (
+                          <div
+                            className={`settings-provider-danger${
+                              value.clearKey ? " pending" : ""
+                            }`}
+                          >
+                            <div>
+                              <strong>
+                                {value.clearKey
+                                  ? "保存后将从本机移除此 Key"
+                                  : "从本机移除 Key"}
+                              </strong>
+                              <span>
+                                仅删除本机配置，不会停用供应商端 Key。
+                              </span>
+                            </div>
+                            {value.clearKey ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateProvider(provider.id, {
+                                    clearKey: false,
+                                  })
+                                }
+                                disabled={saving}
+                              >
+                                撤销
+                              </button>
+                            ) : (
+                              <button
+                                className="settings-remove-key"
+                                type="button"
+                                onClick={() => {
+                                  updateProvider(provider.id, {
+                                    apiKey: "",
+                                    clearKey: true,
+                                  });
+                                  setEditingKeyProviderId(null);
+                                }}
+                                disabled={saving}
+                              >
+                                从本机移除 Key
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
-                  </fieldset>
+                  </section>
                 );
               })}
             </div>

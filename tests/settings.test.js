@@ -67,6 +67,23 @@ test("可以替换或清除 Key，且拒绝占位符", () => {
   );
 });
 
+test("Gemini 可以按顺序保存多个逗号分隔的 Key", () => {
+  const updates = buildSettingsUpdates({
+    providers: {
+      gemini: {
+        apiKey: "gemini-key-a, gemini-key-b",
+        clearKey: false,
+        model: "gemini-3.5-flash",
+      },
+    },
+  });
+
+  assert.equal(
+    updates.GEMINI_API_KEY,
+    "gemini-key-a, gemini-key-b",
+  );
+});
+
 test("可以保存智谱和硅基流动的 Key 与模型", () => {
   const updates = buildSettingsUpdates({
     providers: {

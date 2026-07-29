@@ -52,6 +52,71 @@ function cleanOptionalText(value, max) {
   return cleaned ? cleaned.slice(0, max) : null;
 }
 
+function cleanTokenCount(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const count = Number(value);
+  return Number.isFinite(count) && count >= 0 ? Math.trunc(count) : null;
+}
+
+function usageSummary(usage) {
+  if (!usage || typeof usage !== "object") return null;
+  const summary = {
+    input: cleanTokenCount(usage.input),
+    output: cleanTokenCount(usage.output),
+    total: cleanTokenCount(usage.total),
+  };
+  return Object.values(summary).some((value) => value !== null)
+    ? summary
+    : null;
+}
+
+function cleanNonNegativeInteger(value, max = Number.MAX_SAFE_INTEGER) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0
+    ? Math.min(Math.trunc(number), max)
+    : null;
+}
+
+function attemptSummary(attempt) {
+  if (!attempt || typeof attempt !== "object") return null;
+  const allowedStatuses = new Set(["failed", "skipped", "success"]);
+  const allowedReasons = new Set([
+    "auth",
+    "empty",
+    "quota",
+    "request",
+    "timeout",
+    "unavailable",
+    "unknown",
+  ]);
+  const status = allowedStatuses.has(attempt.status)
+    ? attempt.status
+    : null;
+  if (!status) return null;
+
+  return {
+    provider: cleanOptionalText(attempt.provider, 100),
+    label: cleanOptionalText(attempt.label, 100),
+    model: cleanOptionalText(attempt.model, 200),
+    status,
+    reason: allowedReasons.has(attempt.reason) ? attempt.reason : null,
+    message: cleanOptionalText(attempt.message, 240),
+    statusCode: cleanNonNegativeInteger(attempt.statusCode, 599),
+    keyIndex: cleanNonNegativeInteger(attempt.keyIndex, 100),
+    keyCount: cleanNonNegativeInteger(attempt.keyCount, 100),
+    durationMs: cleanNonNegativeInteger(attempt.durationMs, 3_600_000),
+  };
+}
+
+function attemptsSummary(attempts) {
+  if (!Array.isArray(attempts)) return [];
+  return attempts
+    .slice(0, 20)
+    .map(attemptSummary)
+    .filter(Boolean);
+}
+
 function titleFromDraft(draft) {
   const title = draft
     .split(/\r?\n/u)
@@ -70,6 +135,8 @@ function generationSummary(generation = {}) {
     provider: cleanOptionalText(generation.provider, 100),
     providerLabel: cleanOptionalText(generation.providerLabel, 100),
     model: cleanOptionalText(generation.model, 200),
+    usage: usageSummary(generation.usage),
+    attempts: attemptsSummary(generation.attempts),
   };
 }
 

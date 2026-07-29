@@ -6,10 +6,52 @@ import test from "node:test";
 import { createHistoryStore } from "../historyStore.mjs";
 
 function generation(provider = "gemini") {
+  const providerLabel = provider === "gemini" ? "Gemini" : "Groq Qwen";
   return {
     provider,
-    providerLabel: provider === "gemini" ? "Gemini" : "Groq Qwen",
+    providerLabel,
     model: provider === "gemini" ? "gemini-test" : "qwen-test",
+    usage: {
+      input: 1_200,
+      output: 800,
+      total: 2_000,
+    },
+    attempts:
+      provider === "gemini"
+        ? [
+            {
+              provider: "gemini",
+              label: "Gemini",
+              model: "gemini-test",
+              status: "success",
+              message: "生成成功",
+              keyIndex: 1,
+              keyCount: 2,
+              durationMs: 820,
+            },
+          ]
+        : [
+            {
+              provider: "gemini",
+              label: "Gemini",
+              model: "gemini-test",
+              status: "failed",
+              reason: "quota",
+              message: "Gemini 额度或速率限制已用尽。",
+              statusCode: 429,
+              keyIndex: 1,
+              keyCount: 1,
+              durationMs: 320,
+            },
+            {
+              provider,
+              label: providerLabel,
+              model: "qwen-test",
+              status: "success",
+              message: "生成成功",
+              durationMs: 900,
+            },
+          ],
   };
 }
 
@@ -72,6 +114,35 @@ test("历史记录按最近更新时间倒序，内容更新追加版本并只�
     [2, 3, 4],
   );
   assert.equal(latest.title, "第一篇最终版");
+  assert.deepEqual(latest.versions.at(-1).usage, {
+    input: 1_200,
+    output: 800,
+    total: 2_000,
+  });
+  assert.deepEqual(
+    latest.versions[0].attempts.map(
+      ({ provider, status, reason, statusCode }) => ({
+        provider,
+        status,
+        reason,
+        statusCode,
+      }),
+    ),
+    [
+      {
+        provider: "gemini",
+        status: "failed",
+        reason: "quota",
+        statusCode: 429,
+      },
+      {
+        provider: "groq",
+        status: "success",
+        reason: null,
+        statusCode: null,
+      },
+    ],
+  );
   assert.deepEqual(
     {
       mode: first.source.mode,

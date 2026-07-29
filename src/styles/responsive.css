@@ -1,0 +1,510 @@
+@media (max-width: 1120px) {
+  .workspace {
+    grid-template-columns: minmax(270px, 0.75fr) minmax(460px, 1.25fr);
+  }
+
+  .statusbar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  }
+
+  .secure-note {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    display: grid;
+    grid-template-rows: 60px minmax(0, 1fr) 40px;
+    height: 100dvh;
+    min-height: 0;
+  }
+
+  .topbar {
+    height: 60px;
+    padding: 0 16px;
+  }
+
+  .local-status {
+    font-size: 0;
+  }
+
+  .topbar-actions {
+    gap: 9px;
+  }
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+  }
+
+  .workspace {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    overflow: hidden;
+    padding: 10px;
+  }
+
+  .source-content {
+    padding: 14px;
+  }
+
+  textarea {
+    min-height: 0;
+    flex-basis: 100px;
+  }
+
+  .source-tips {
+    display: none;
+  }
+
+  .draft-panel {
+    min-height: 0;
+  }
+
+  .panel-header,
+  .source-panel,
+  .draft-panel {
+    grid-template-rows: 56px minmax(0, 1fr);
+  }
+
+  .panel-header {
+    height: 56px;
+    min-height: 56px;
+    padding: 0 12px;
+  }
+
+  .format-label,
+  .prompt-profile-summary {
+    display: none;
+  }
+
+  .markdown-document {
+    padding: 34px 22px 60px;
+  }
+
+  .empty-workflow-guide {
+    min-height: 0;
+    padding: 28px 18px 38px;
+  }
+
+  .empty-workflow-heading h2 {
+    font-size: 22px;
+  }
+
+  .workflow-map {
+    margin-top: 42px;
+  }
+
+  .workflow-map-stages {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 28px 16px;
+  }
+
+  .workflow-map-stage small {
+    display: none;
+  }
+
+  .workflow-map-connector {
+    display: none;
+  }
+
+  .workflow-start-cue {
+    top: -30px;
+    left: 12px;
+  }
+
+  .workflow-start-cue::after {
+    display: none;
+  }
+
+  .publishing-route {
+    width: 100%;
+    margin: 36px 0 0;
+  }
+
+  .publishing-route-branch {
+    display: none;
+  }
+
+  .publishing-route-steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    row-gap: 14px;
+  }
+
+  .publishing-route-steps::before {
+    right: 12%;
+    left: 12%;
+  }
+
+  .publish-workflow {
+    gap: 10px;
+    padding: 12px 8px 26px;
+  }
+
+  .publish-step {
+    padding: 11px;
+  }
+
+  .publish-step-heading {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .publish-step-number {
+    width: 32px;
+    height: 32px;
+  }
+
+  .publish-step p {
+    display: none;
+  }
+
+  .workflow-summary {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 9px;
+    padding: 11px;
+  }
+
+  .workflow-summary-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .platform-action {
+    font-size: 9px;
+  }
+
+  .publish-copy-area {
+    margin-top: 9px;
+  }
+
+  .publish-copy-toolbar {
+    min-height: 0;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .publish-copy-toolbar-meta {
+    justify-content: space-between;
+  }
+
+  .publish-copy-actions {
+    width: auto;
+  }
+
+  .section-copy-button {
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    flex: 0 0 44px;
+    padding: 0;
+  }
+
+  .section-regenerate-button {
+    width: 44px;
+  }
+
+  .section-candidate-list.is-multiple {
+    grid-template-columns: 1fr;
+  }
+
+  .section-candidate-list.is-single .section-candidate {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+
+  .candidate-apply {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .publish-copy-area pre {
+    min-height: 64px;
+    max-height: 120px;
+    padding: 10px;
+  }
+
+  .publish-copy-area.is-description pre {
+    min-height: 160px;
+    max-height: 240px;
+  }
+
+  .publish-copy-area.is-body pre {
+    height: clamp(260px, 34vh, 360px);
+    max-height: none;
+  }
+
+  .publish-code-editor,
+  .publish-rich-preview {
+    min-height: 260px;
+    height: auto;
+  }
+
+  .publish-rich-preview {
+    padding: 22px 16px 36px;
+  }
+
+  .publish-rich-preview h1 {
+    font-size: 21px;
+  }
+
+  .publish-rich-preview h2 {
+    font-size: 18px;
+  }
+
+  .publish-rich-preview p,
+  .publish-rich-preview li {
+    font-size: 15px;
+  }
+
+  .statusbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    min-height: 0;
+    gap: 10px;
+    overflow: visible;
+    padding: 0 16px;
+    white-space: nowrap;
+  }
+
+  .secure-note {
+    display: none;
+  }
+
+  .statusbar-chain {
+    display: flex;
+    overflow: visible;
+  }
+
+  .statusbar-run {
+    width: 100%;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+
+  .statusbar-run > span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .statusbar-model,
+  .statusbar-token,
+  .statusbar-token-breakdown {
+    display: none;
+  }
+
+  .settings-backdrop {
+    padding: 10px;
+  }
+
+  .settings-dialog {
+    max-height: calc(100dvh - 20px);
+  }
+
+  .history-dialog {
+    height: calc(100dvh - 20px);
+  }
+
+  .history-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 180px minmax(0, 1fr);
+  }
+
+  .history-list-panel {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .history-list {
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 12px 10px;
+  }
+
+  .history-list-item {
+    width: 220px;
+    min-width: 220px;
+    margin: 0;
+  }
+
+  .history-detail {
+    padding: 13px 14px 10px;
+  }
+
+  .history-detail-heading {
+    display: grid;
+    gap: 9px;
+  }
+
+  .history-detail-heading h3 {
+    font-size: 15px;
+  }
+
+  .history-detail-heading label {
+    width: 150px;
+  }
+
+  .history-meta {
+    margin: 9px 0 8px;
+  }
+
+  .history-draft {
+    padding: 12px;
+    font-size: 10px;
+  }
+
+  .history-actions {
+    min-height: 46px;
+    padding-top: 9px;
+  }
+
+  .history-delete-confirm {
+    flex-wrap: wrap;
+  }
+
+  .history-delete-confirm span {
+    width: 100%;
+  }
+
+  .settings-dialog-header {
+    padding: 16px 16px 10px;
+  }
+
+  .settings-tabs {
+    margin: 0 16px 12px;
+  }
+
+  .settings-security-note {
+    margin: 0 16px 12px;
+  }
+
+  .settings-provider-list {
+    padding: 0 16px 12px;
+  }
+
+  .preference-settings {
+    padding: 0 16px 14px;
+  }
+
+  .creation-settings {
+    padding: 0 16px 14px;
+  }
+
+  .creation-mode-switch > button b {
+    display: none;
+  }
+
+  .prompt-settings {
+    padding: 0 16px 14px;
+  }
+
+  .prompt-profile-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .legacy-instructions-note {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .prompt-module-tabs {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .prompt-module-editor textarea {
+    min-height: 220px;
+  }
+
+  .preference-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-provider-summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 10px;
+    padding: 10px;
+  }
+
+  .settings-provider-model-summary {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .settings-provider-manage {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 44px;
+  }
+
+  .settings-provider-details {
+    padding: 10px;
+  }
+
+  .settings-provider-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-replace-key button,
+  .settings-provider-danger button {
+    min-height: 44px;
+  }
+
+  .settings-provider-danger {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-provider-danger button {
+    width: 100%;
+  }
+
+  .settings-actions {
+    padding: 10px 16px;
+  }
+}
+
+@media (min-width: 761px) and (max-height: 680px) {
+  .source-content {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .source-tips {
+    margin-top: 10px;
+    padding-top: 8px;
+  }
+
+  .source-tips ol {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .statusbar-token-breakdown {
+    display: none;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 920px) {
+  .statusbar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
