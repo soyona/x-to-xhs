@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Code2, Eye } from "lucide-react";
 import {
   AlertIcon,
   CheckIcon,
@@ -11,9 +18,11 @@ import {
   buildMarkdownFilename,
 } from "./markdownExport";
 import {
+  appendSourceAttribution,
   countPlatformCharacters,
   splitXiaohongshuDraft,
 } from "./xiaohongshuPublish";
+import { SOURCE_MODES, normalizeSourceMode } from "./sourceContext";
 import {
   toXiaohongshuPlainText,
   toXiaohongshuRichHtml,
@@ -136,16 +145,36 @@ function CopyStep({
   generationControls,
   children,
   previewSize = "compact",
-  expandable = false,
   warning = false,
   stale = false,
   disabled = false,
+  editorValue,
+  onEditorChange,
+  previewHtml,
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [viewMode, setViewMode] = useState("preview");
+  const [codeValue, setCodeValue] = useState(editorValue || "");
+  const codeEditorRef = useRef(null);
+  const hasMarkdownModes =
+    typeof onEditorChange === "function" && typeof previewHtml === "string";
 
   useEffect(() => {
-    setExpanded(false);
-  }, [value]);
+    setCodeValue(editorValue || "");
+  }, [editorValue]);
+
+  useLayoutEffect(() => {
+    const editor = codeEditorRef.current;
+    if (!editor || viewMode !== "code") return;
+    editor.style.height = "auto";
+    editor.style.height = `${editor.scrollHeight}px`;
+  }, [codeValue, viewMode]);
+
+  function toggleMarkdownMode() {
+    if (viewMode === "code" && codeValue !== editorValue) {
+      onEditorChange(codeValue);
+    }
+    setViewMode((current) => current === "preview" ? "code" : "preview");
+  }
 
   return (
     <section
@@ -169,26 +198,35 @@ function CopyStep({
         </div>
       )}
       {generationControls?.panel}
-      <div
-        className={`publish-copy-area is-${previewSize} ${expanded ? "is-expanded" : ""}`}
-      >
+      <div className={`publish-copy-area is-${previewSize}`}>
         <div className="publish-copy-toolbar">
           <div className="publish-copy-toolbar-meta">
             <span>内容预览</span>
-            {expandable && (
-              <button
-                className="publish-preview-toggle"
-                type="button"
-                aria-expanded={expanded}
-                aria-controls={`publish-step-${number}-preview`}
-                onClick={() => setExpanded((current) => !current)}
-                disabled={!value}
-              >
-                {expanded ? "收起正文" : "展开正文"}
-              </button>
-            )}
           </div>
           <div className="publish-copy-actions">
+            {hasMarkdownModes && (
+              <button
+                className="section-copy-button markdown-mode-toggle"
+                type="button"
+                title={
+                  viewMode === "preview"
+                    ? "切换到 Markdown Code"
+                    : "切换到 Markdown Preview"
+                }
+                aria-label={
+                  viewMode === "preview"
+                    ? "切换到 Markdown Code"
+                    : "切换到 Markdown Preview"
+                }
+                onClick={toggleMarkdownMode}
+              >
+                {viewMode === "preview" ? (
+                  <Code2 aria-hidden="true" />
+                ) : (
+                  <Eye aria-hidden="true" />
+                )}
+              </button>
+            )}
             {generationControls?.action}
             <button
               className="section-copy-button"
@@ -230,13 +268,37 @@ function CopyStep({
             )}
           </div>
         </div>
-        <pre
-          id={`publish-step-${number}-preview`}
-          aria-label={`${title}内容预览`}
-          tabIndex="0"
-        >
-          {value || "生成结果中未识别到此部分，请先检查当前草稿。"}
-        </pre>
+        {hasMarkdownModes && viewMode === "code" ? (
+          <textarea
+            ref={codeEditorRef}
+            className="publish-code-editor"
+            id={`publish-step-${number}-preview`}
+            aria-label={`${title} Markdown 编辑器`}
+            value={codeValue}
+            onChange={(event) => setCodeValue(event.target.value)}
+            onBlur={() => {
+              if (codeValue !== editorValue) onEditorChange(codeValue);
+            }}
+            disabled={disabled}
+            spellCheck="false"
+          />
+        ) : hasMarkdownModes ? (
+          <div
+            className="publish-rich-preview"
+            id={`publish-step-${number}-preview`}
+            aria-label={`${title}效果预览`}
+            tabIndex="0"
+            dangerouslySetInnerHTML={{ __html: previewHtml }}
+          />
+        ) : (
+          <pre
+            id={`publish-step-${number}-preview`}
+            aria-label={`${title}内容预览`}
+            tabIndex="0"
+          >
+            {value || "生成结果中未识别到此部分，请先检查当前草稿。"}
+          </pre>
+        )}
         {exportStatus && (
           <span
             className={`markdown-export-feedback ${exportStatus}`}
@@ -300,6 +362,7 @@ function WorkflowSummary({ historyCount, onRestore }) {
 
 export function PublishWorkflow({
   draft,
+  source,
   historyCount,
   onRestore,
   workflowId,
@@ -308,6 +371,14 @@ export function PublishWorkflow({
   onApplySection,
 }) {
   const fields = useMemo(() => splitXiaohongshuDraft(draft), [draft]);
+  const attributedBody = useMemo(
+    () => appendSourceAttribution(fields.body, source),
+    [fields.body, source],
+  );
+  const attributedBodyHtml = useMemo(
+    () => toXiaohongshuRichHtml(attributedBody),
+    [attributedBody],
+  );
   const [copiedStep, setCopiedStep] = useState("");
   const [exportStatus, setExportStatus] = useState("");
   const [publishTitle, setPublishTitle] = useState(fields.publishTitle);
@@ -464,6 +535,11 @@ export function PublishWorkflow({
     }
   }
 
+  function editBody(value) {
+    onApplySection("body", value);
+    setBodyVersion((current) => current + 1);
+  }
+
   function generationControls(section, currentValue) {
     const generationState = sectionGenerations[section];
     const hasMultipleCandidates =
@@ -540,11 +616,11 @@ export function PublishWorkflow({
     }, 1800);
   }
 
-  function exportMarkdownBody() {
-    if (!fields.body) return;
+  function exportMarkdownBody(body = fields.body) {
+    if (!body) return;
 
     try {
-      const blob = new Blob([buildMarkdownBody(fields.body)], {
+      const blob = new Blob([buildMarkdownBody(body)], {
         type: "text/markdown;charset=utf-8",
       });
       const objectUrl = URL.createObjectURL(blob);
@@ -602,19 +678,21 @@ export function PublishWorkflow({
       <CopyStep
         number="02"
         title="输入长文正文"
-        hint="推荐复制正文以保留完整格式；也可下载 Markdown（部分格式可能不受小红书导入支持）。导入会覆盖编辑器内已有正文。"
-        value={fields.body}
-        meta={`${fields.counts.body.toLocaleString()}字`}
+        hint="Preview 查看粘贴后的排版效果，Code 可编辑 Markdown；复制正文可保留完整格式。"
+        value={attributedBody}
+        meta={`${countPlatformCharacters(attributedBody).toLocaleString()}字`}
         copied={copiedStep === "body"}
-        onCopy={() => copyField("body", fields.body, { richText: true })}
+        onCopy={() => copyField("body", attributedBody, { richText: true })}
         copyLabel="复制正文"
         copyAriaLabel="复制长文正文"
         exportStatus={exportStatus}
-        onExport={exportMarkdownBody}
+        onExport={() => exportMarkdownBody(attributedBody)}
         generationControls={generationControls("body", fields.body)}
         disabled={false}
         previewSize="body"
-        expandable
+        editorValue={fields.body}
+        onEditorChange={editBody}
+        previewHtml={attributedBodyHtml}
       />
 
       <ActionStep
@@ -686,11 +764,17 @@ export function PublishWorkflow({
         number="07"
         title="预览并发布"
         description={
-          Object.entries(sectionBodyVersions).some(
+          normalizeSourceMode(source?.mode) === SOURCE_MODES.X_CONTENT &&
+          !source?.sourceUrl &&
+          !source?.url
+            ? "尚未提供原帖链接，请补充来源；同时确认引用、事实、图片使用和小红书 AI 内容声明后再发布。"
+            : Object.entries(sectionBodyVersions).some(
             ([, version]) => version < bodyVersion,
           )
             ? "正文已更新，发布标题、描述或标签仍基于上一版正文；请重新生成或人工确认后发布。"
-            : "在小红书确认封面、内容卡片、标题、描述和标签，确认无误后点击「发布」。"
+            : normalizeSourceMode(source?.mode) === SOURCE_MODES.ORIGINAL
+              ? "确认内容、封面和标签无误，并使用小红书的 AI 内容声明后发布。"
+              : "确认作者、原帖链接、引用和事实无误，并使用小红书的 AI 内容声明后发布。"
         }
       />
     </div>

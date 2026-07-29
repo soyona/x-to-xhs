@@ -7,6 +7,8 @@ import {
   toXiaohongshuText,
 } from "../src/xiaohongshuText.js";
 import {
+  appendSourceAttribution,
+  buildSourceAttribution,
   countPlatformCharacters,
   splitXiaohongshuDraft,
 } from "../src/xiaohongshuPublish.js";
@@ -88,6 +90,32 @@ test("为正文复制同时生成富文本结构和无井号纯文本兜底", ()
     toXiaohongshuRichHtml(source),
     "<div><h1>01 一级标题</h1><p><br></p><h2>1.1 二级标题</h2><p><br></p><ul><li>无序列表</li></ul><ol><li>有序列表</li></ol></div>",
   );
+});
+
+test("高亮语法在纯文本中移除标记并在富文本中渲染高亮", () => {
+  const source = "理解 ==ReAct 循环==，但保留判断 a == b。";
+
+  assert.equal(
+    toXiaohongshuPlainText(source),
+    "理解 ReAct 循环，但保留判断 a == b。",
+  );
+  assert.equal(
+    toXiaohongshuRichHtml(source),
+    "<div><p>理解 <mark>ReAct 循环</mark>，但保留判断 a == b。</p></div>",
+  );
+});
+
+test("正文拆分保留高亮语法供 Code 编辑和 Preview 渲染", () => {
+  const result = splitXiaohongshuDraft(`# 长文标题
+
+这是 ==需要重点关注== 的结论。
+
+## 正文小结 / 摘要
+
+摘要内容。`);
+
+  assert.equal(result.body, "这是 ==需要重点关注== 的结论。");
+  assert.match(toXiaohongshuRichHtml(result.body), /<mark>需要重点关注<\/mark>/);
 });
 
 test("纯文本正文的符号与空行原样进入02预览和剪贴板字段", () => {
@@ -212,6 +240,24 @@ test("按小红书写长文流程拆分标题、正文、描述和标签", () =>
     countPlatformCharacters(result.publishTitle),
   );
   assert.doesNotMatch(result.body, /正文小结|排版风格建议|推荐标签|审稿自查/);
+});
+
+test("根据来源模式确定性附加署名且不会重复", () => {
+  const source = {
+    mode: "x-content",
+    sourceUrl: "https://x.com/example/status/123",
+    authorHandle: "example",
+  };
+  const attributed = appendSourceAttribution("正文内容。", source);
+
+  assert.match(attributed, /资料及观点来源：X @example/);
+  assert.match(attributed, /原帖：https:\/\/x\.com\/example\/status\/123/);
+  assert.match(attributed, /AI 辅助整理/);
+  assert.equal(appendSourceAttribution(attributed, source), attributed);
+  assert.equal(
+    buildSourceAttribution({ mode: "original" }),
+    "本文使用 AI 辅助整理，并经人工审核。",
+  );
 });
 
 test("识别同一行、加粗、编号和冒号形式的摘要与标签", () => {

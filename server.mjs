@@ -21,6 +21,14 @@ import {
 } from "./src/sectionGeneration.js";
 import { splitXiaohongshuDraft } from "./src/xiaohongshuPublish.js";
 import { createPromptStore } from "./promptStore.mjs";
+import {
+  SOURCE_MODES,
+  authorHandleFromUrl,
+  extractXStatusUrl,
+  inferSourceMode,
+  normalizeSourceMode,
+  withoutStandaloneSourceUrl,
+} from "./src/sourceContext.js";
 
 const rootDir = fileURLToPath(new URL(".", import.meta.url));
 
@@ -248,15 +256,44 @@ function htmlToText(html) {
     .trim();
 }
 
-export async function resolveSource(input) {
+export async function resolveSource(input, requestedMode) {
   const trimmed = input?.trim();
   if (!trimmed) throw new Error("请先粘贴 X 帖子内容或 URL。");
-  if (!isXUrl(trimmed)) {
-    return { content: trimmed, sourceUrl: null, resolved: false };
+  const detectedMode = inferSourceMode(trimmed);
+  const mode =
+    normalizeSourceMode(requestedMode) ||
+    detectedMode ||
+    SOURCE_MODES.X_CONTENT;
+  const sourceUrl = extractXStatusUrl(trimmed);
+
+  if (mode === SOURCE_MODES.ORIGINAL) {
+    return {
+      mode,
+      content: trimmed,
+      sourceUrl: null,
+      authorHandle: null,
+      authorName: null,
+      resolved: false,
+    };
+  }
+
+  if (mode !== SOURCE_MODES.X_URL) {
+    return {
+      mode: SOURCE_MODES.X_CONTENT,
+      content: withoutStandaloneSourceUrl(trimmed, sourceUrl),
+      sourceUrl,
+      authorHandle: sourceUrl ? authorHandleFromUrl(sourceUrl) : null,
+      authorName: null,
+      resolved: false,
+    };
+  }
+
+  if (!sourceUrl || !isXUrl(sourceUrl)) {
+    throw new Error("原文链接模式需要一条有效的 X 帖子链接。");
   }
 
   const endpoint = new URL("https://publish.twitter.com/oembed");
-  endpoint.searchParams.set("url", trimmed);
+  endpoint.searchParams.set("url", sourceUrl);
   endpoint.searchParams.set("omit_script", "true");
   endpoint.searchParams.set("dnt", "true");
 
@@ -282,15 +319,32 @@ export async function resolveSource(input) {
       "这个 X 链接只返回了短链，无法可靠读取长文正文。请改为粘贴完整内容。",
     );
   }
-  return { content, sourceUrl: trimmed, resolved: true };
+  return {
+    mode,
+    content,
+    sourceUrl,
+    authorHandle: authorHandleFromUrl(sourceUrl) || null,
+    authorName:
+      typeof data.author_name === "string" ? data.author_name.trim() : null,
+    resolved: true,
+  };
 }
 
 export async function buildPrompt(source, preferences = {}, promptProfile) {
   const profile = promptProfile || (await promptStore.getEffectiveProfile());
-  const replacement = source.sourceUrl
-    ? `${source.content}\n\n原始链接：${source.sourceUrl}`
-    : source.content;
-  const inputHeading = "**本次要转化的X推文内容如下：**";
+  const mode =
+    normalizeSourceMode(source.mode) ||
+    (source.sourceUrl ? SOURCE_MODES.X_URL : SOURCE_MODES.X_CONTENT);
+  const sourceContext = [
+    `source_mode: ${mode}`,
+    `source_url: ${source.sourceUrl || "未提供"}`,
+    `author_handle: ${source.authorHandle ? `@${source.authorHandle}` : "未提供"}`,
+    `author_name: ${source.authorName || "未提供"}`,
+  ].join("\n");
+  const inputHeading =
+    mode === SOURCE_MODES.ORIGINAL
+      ? "**本次要编辑的自主编写内容如下：**"
+      : "**本次要转化的 X 内容如下：**";
   const preferencePrompt = buildContentPreferencePrompt(
     normalizeContentPreferences(preferences),
   );
@@ -303,15 +357,22 @@ export async function buildPrompt(source, preferences = {}, promptProfile) {
     modules.tags,
     modules.output,
     preferencePrompt,
+    "## 结构化来源信息",
+    "<source_metadata>",
+    sourceContext,
+    "</source_metadata>",
     inputHeading,
     "<source_content>",
-    replacement,
+    source.content,
     "</source_content>",
   ].join("\n\n");
 }
 
-async function generateDraft(input, { preferences = {} } = {}) {
-  const source = await resolveSource(input);
+async function generateDraft(
+  input,
+  { preferences = {}, sourceMode = null } = {},
+) {
+  const source = await resolveSource(input, sourceMode);
   const normalizedPreferences = normalizeContentPreferences(preferences);
   const promptProfile = await promptStore.getEffectiveProfile();
   const prompt = await buildPrompt(source, preferences, promptProfile);
@@ -356,16 +417,35 @@ async function generateSection(payload = {}) {
     previousCandidates,
     rejectionReasons,
     preferences,
+    sourceMode,
+    source: providedSource,
   } = payload;
-  if (!input?.trim()) throw new Error("缺少原始 X 内容，无法局部生成。");
+  if (!input?.trim()) throw new Error("缺少输入内容，无法局部生成。");
   if (!draft?.trim()) throw new Error("缺少当前草稿，无法局部生成。");
 
-  const source = await resolveSource(input);
+  const source =
+    providedSource?.content && normalizeSourceMode(providedSource.mode)
+      ? {
+          mode: normalizeSourceMode(providedSource.mode),
+          content: String(providedSource.content).trim(),
+          sourceUrl:
+            extractXStatusUrl(
+              providedSource.sourceUrl || providedSource.url || "",
+            ) || null,
+          authorHandle:
+            String(providedSource.authorHandle || "").trim() || null,
+          authorName: String(providedSource.authorName || "").trim() || null,
+          resolved: Boolean(providedSource.resolved),
+        }
+      : await resolveSource(input, sourceMode);
   const fields = splitXiaohongshuDraft(draft);
   const promptProfile = await promptStore.getEffectiveProfile();
   const prompt = buildSectionGenerationPrompt({
     section,
     sourceContent: source.content,
+    sourceMode: source.mode,
+    sourceUrl: source.sourceUrl,
+    authorHandle: source.authorHandle,
     draft,
     body: fields.body,
     currentValue,
@@ -466,16 +546,19 @@ async function handleApi(request, response) {
   }
 
   if (request.method === "POST" && apiUrl.pathname === "/api/resolve") {
-    const { input } = await readJson(request);
-    return sendJson(response, 200, await resolveSource(input));
+    const { input, sourceMode } = await readJson(request);
+    return sendJson(response, 200, await resolveSource(input, sourceMode));
   }
 
   if (request.method === "POST" && apiUrl.pathname === "/api/generate") {
-    const { input, preferences } = await readJson(request);
+    const { input, preferences, sourceMode } = await readJson(request);
     return sendJson(
       response,
       200,
-      await generateDraft(input, { preferences }),
+      await generateDraft(input, {
+        preferences,
+        sourceMode,
+      }),
     );
   }
 

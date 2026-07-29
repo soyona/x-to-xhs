@@ -1,4 +1,5 @@
 import { toXiaohongshuText } from "./xiaohongshuText.js";
+import { SOURCE_MODES, normalizeSourceMode } from "./sourceContext.js";
 
 const sectionLabels = {
   summary: /正文小结\s*[\/／]\s*摘要|正文小结|正文描述|发布文案/u,
@@ -122,6 +123,45 @@ export function countPlatformCharacters(value = "") {
   return Array.from(value).length;
 }
 
+export function buildSourceAttribution(source = {}) {
+  const mode = normalizeSourceMode(source.mode);
+  const sourceUrl = source.sourceUrl || source.url || "";
+  const authorHandle = String(source.authorHandle || "")
+    .trim()
+    .replace(/^@/u, "");
+  const lines = [];
+
+  if (mode === SOURCE_MODES.X_URL || mode === SOURCE_MODES.X_CONTENT) {
+    lines.push(
+      authorHandle
+        ? `资料及观点来源：X @${authorHandle}`
+        : "资料及观点来源：用户提供的 X 内容",
+    );
+    lines.push(
+      sourceUrl ? `原帖：${sourceUrl}` : "原帖链接：未提供，请在发布前补充",
+    );
+    lines.push(
+      "本文基于公开信息进行整理、核验与个人解读，不代表原作者立场。",
+    );
+  }
+
+  if (mode) {
+    lines.push("本文使用 AI 辅助整理，并经人工审核。");
+  }
+
+  return lines.join("\n");
+}
+
+export function appendSourceAttribution(body = "", source = {}) {
+  const normalizedBody = String(body).trim();
+  const attributionLines = buildSourceAttribution(source)
+    .split("\n")
+    .filter(Boolean)
+    .filter((line) => !normalizedBody.includes(line));
+  if (!attributionLines.length) return normalizedBody;
+  return [normalizedBody, attributionLines.join("\n")].filter(Boolean).join("\n\n");
+}
+
 export function splitXiaohongshuDraft(markdown = "") {
   const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
   const { title, titleIndex } = extractTitleAndLine(lines);
@@ -131,7 +171,9 @@ export function splitXiaohongshuDraft(markdown = "") {
     ["summary", "layout", "tags", "review"],
     bodyStart,
   );
-  const body = toXiaohongshuText(lines.slice(bodyStart, bodyEnd).join("\n"));
+  const body = toXiaohongshuText(lines.slice(bodyStart, bodyEnd).join("\n"), {
+    preserveHighlights: true,
+  });
   const summary = sectionContent(lines, "summary", [
     "layout",
     "tags",

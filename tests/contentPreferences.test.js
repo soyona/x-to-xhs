@@ -74,8 +74,11 @@ test("生成提示词在原始输入前注入清洗后的快速设置", async ()
   assert.match(prompt, /目标读者：小白用户/);
   assert.match(prompt, /表达语气：轻松朋友感/);
   assert.match(prompt, /用户补充指令/);
+  assert.match(prompt, /source_mode: x-content/);
+  assert.match(prompt, /source_url: 未提供/);
+  assert.match(prompt, /<source_metadata>/);
   assert.ok(
     prompt.indexOf("## 本次快速设置") <
-      prompt.indexOf("**本次要转化的X推文内容如下：**"),
+      prompt.indexOf("**本次要转化的 X 内容如下：**"),
   );
 });

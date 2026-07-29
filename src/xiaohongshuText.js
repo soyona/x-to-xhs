@@ -1,9 +1,12 @@
-export function toXiaohongshuText(markdown = "") {
+export function toXiaohongshuText(
+  markdown = "",
+  { preserveHighlights = false } = {},
+) {
   const needsCompatibilityCleanup =
     /(?:^|\n)\s*(?:#{1,6}\s|>|[-*+]\s|```|\|.+\|)|\*\*|__|~~|`[^`\n]+`/u.test(
       markdown,
     ) ||
-    /未完待续|(?:^|\n)\s*[-*_](?:\s*[-*_]){2,}\s*(?:\n|$)/u.test(
+    /(?<![=])==[^=\n]+==(?![=])|未完待续|(?:^|\n)\s*[-*_](?:\s*[-*_]){2,}\s*(?:\n|$)/u.test(
       markdown,
     );
   const cleaned = markdown
@@ -31,6 +34,10 @@ export function toXiaohongshuText(markdown = "") {
     .replace(/`([^`\n]+)`/g, "$1")
     .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "$1")
     .replace(/(?<!_)_([^_\n]+)_(?!_)/g, "$1")
+    .replace(
+      /(?<![=])==([^=\n]+)==(?![=])/gu,
+      (_, content) => preserveHighlights ? `==${content}==` : content,
+    )
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/[ \t]+$/gm, "")
@@ -56,8 +63,19 @@ function escapeHtml(value = "") {
     .replace(/'/g, "&#39;");
 }
 
+function richInlineMarkdown(value = "") {
+  const parts = value.split(/(?<![=])==([^=\n]+)==(?![=])/gu);
+  return parts
+    .map((part, index) =>
+      index % 2 === 1 ? `<mark>${escapeHtml(part)}</mark>` : escapeHtml(part),
+    )
+    .join("");
+}
+
 export function toXiaohongshuRichHtml(markdown = "") {
-  const lines = toXiaohongshuText(markdown).split("\n");
+  const lines = toXiaohongshuText(markdown, {
+    preserveHighlights: true,
+  }).split("\n");
   const html = [];
   let listType = "";
 
@@ -73,7 +91,7 @@ export function toXiaohongshuRichHtml(markdown = "") {
       listType = type;
       html.push(`<${type}>`);
     }
-    html.push(`<li>${escapeHtml(content)}</li>`);
+    html.push(`<li>${richInlineMarkdown(content)}</li>`);
   }
 
   for (const line of lines) {
@@ -88,17 +106,17 @@ export function toXiaohongshuRichHtml(markdown = "") {
       html.push("<p><br></p>");
     } else if (h2Match) {
       closeList();
-      html.push(`<h2>${escapeHtml(h2Match[1])}</h2>`);
+      html.push(`<h2>${richInlineMarkdown(h2Match[1])}</h2>`);
     } else if (h1Match) {
       closeList();
-      html.push(`<h1>${escapeHtml(h1Match[1])}</h1>`);
+      html.push(`<h1>${richInlineMarkdown(h1Match[1])}</h1>`);
     } else if (bulletMatch) {
       appendListItem("ul", bulletMatch[1]);
     } else if (orderedMatch) {
       appendListItem("ol", orderedMatch[1]);
     } else {
       closeList();
-      html.push(`<p>${escapeHtml(trimmed)}</p>`);
+      html.push(`<p>${richInlineMarkdown(trimmed)}</p>`);
     }
   }
 

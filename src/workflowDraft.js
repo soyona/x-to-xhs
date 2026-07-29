@@ -73,7 +73,7 @@ function replaceFixedSection(draft, name, value, followingNames) {
 
 export function replaceWorkflowSection(draft = "", section, value = "") {
   const cleaned = value.trim();
-  if (!draft.trim() || !cleaned) return draft;
+  if (!draft.trim() || (!cleaned && section !== "body")) return draft;
   const lines = draft.replace(/\r\n?/gu, "\n").split("\n");
   const titleIndex = titleLineIndex(lines);
 
@@ -112,4 +112,3 @@ export function replaceWorkflowSection(draft = "", section, value = "") {
 
   return draft;
 }
-

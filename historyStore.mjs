@@ -235,8 +235,11 @@ export function createHistoryStore({
         title: titleFromDraft(cleanDraft),
         source: {
           type: source?.sourceUrl ? "url" : "text",
+          mode: cleanOptionalText(source?.mode, 20),
           content: sourceContent,
           url: cleanOptionalText(source?.sourceUrl, 2_000),
+          authorHandle: cleanOptionalText(source?.authorHandle, 100),
+          authorName: cleanOptionalText(source?.authorName, 200),
           excerpt: sourceExcerpt(sourceContent),
         },
         currentVersion: 1,

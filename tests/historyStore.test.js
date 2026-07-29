@@ -15,7 +15,13 @@ function generation(provider = "gemini") {
 
 function recordInput(title, source = "原始 X 内容") {
   return {
-    source: { content: source, sourceUrl: null },
+    source: {
+      mode: "x-content",
+      content: source,
+      sourceUrl: "https://x.com/example/status/123",
+      authorHandle: "example",
+      authorName: "Example Author",
+    },
     draft: `# ${title}\n\n正文`,
     preferences: { audience: "intermediate", tone: "warm" },
     generation: generation(),
@@ -66,6 +72,20 @@ test("历史记录按最近更新时间倒序，内容更新追加版本并只�
     [2, 3, 4],
   );
   assert.equal(latest.title, "第一篇最终版");
+  assert.deepEqual(
+    {
+      mode: first.source.mode,
+      url: first.source.url,
+      authorHandle: first.source.authorHandle,
+      authorName: first.source.authorName,
+    },
+    {
+      mode: "x-content",
+      url: "https://x.com/example/status/123",
+      authorHandle: "example",
+      authorName: "Example Author",
+    },
+  );
 
   const mode = (await stat(store.filePath)).mode & 0o777;
   const directoryMode = (await stat(dataDir)).mode & 0o777;

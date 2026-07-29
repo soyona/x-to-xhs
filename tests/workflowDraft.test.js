@@ -62,6 +62,16 @@ test("替换正文时不覆盖标题、摘要、标签和自查", () => {
   assert.match(next, /审稿自查/);
 });
 
+test("正文编辑器允许清空正文且保留后续发布分区", () => {
+  const next = replaceWorkflowSection(draft, "body", "");
+  const fields = splitXiaohongshuDraft(next);
+
+  assert.equal(fields.longformTitle, "原长文标题");
+  assert.equal(fields.body, "");
+  assert.equal(fields.description, "原摘要。");
+  assert.equal(fields.tags, "#旧标签1 #旧标签2");
+});
+
 test("替换描述和标签时保持固定分区顺序与空行", () => {
   const withDescription = replaceWorkflowSection(
     draft,

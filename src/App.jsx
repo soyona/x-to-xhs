@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ApiSettingsDialog } from "./ApiSettingsDialog";
 import {
   CONTENT_PREFERENCE_STORAGE_KEY,
@@ -12,6 +12,12 @@ import { MarkdownPreview } from "./MarkdownPreview";
 import { PublishWorkflow } from "./PublishWorkflow";
 import { replaceWorkflowSection } from "./workflowDraft";
 import { splitXiaohongshuDraft } from "./xiaohongshuPublish";
+import {
+  SOURCE_MODES,
+  extractXStatusUrl,
+  inferSourceMode,
+  normalizeSourceMode,
+} from "./sourceContext";
 import {
   PROTOTYPE_DRAFT_PASSED,
   PROTOTYPE_INPUT,
@@ -102,8 +108,19 @@ export default function App() {
           providerLabel: "本地交互稿",
           model: "不调用模型",
           attempts: [],
+          source: {
+            mode: SOURCE_MODES.X_CONTENT,
+            content: PROTOTYPE_INPUT,
+            sourceUrl: null,
+            authorHandle: null,
+            authorName: null,
+            resolved: false,
+          },
         }
       : null,
+  );
+  const [sourceModeOverride, setSourceModeOverride] = useState(
+    prototypeMode ? SOURCE_MODES.X_CONTENT : null,
   );
   const [draftHistory, setDraftHistory] = useState([]);
   const [workflowId, setWorkflowId] = useState(prototypeMode ? 1 : 0);
@@ -139,12 +156,40 @@ export default function App() {
 
   const isGenerating = status === "generating";
   const isWorking = isGenerating;
+  const detectedSourceMode = useMemo(() => inferSourceMode(input), [input]);
+  const detectedSourceUrl = useMemo(() => extractXStatusUrl(input), [input]);
+  const sourceMode =
+    detectedSourceMode || normalizeSourceMode(sourceModeOverride);
+  const recognizedSourceUrl =
+    detectedSourceUrl ||
+    generation?.source?.sourceUrl ||
+    generation?.source?.url ||
+    null;
+  const activeSource = generation?.source
+    ? {
+        ...generation.source,
+        mode: sourceMode || generation.source.mode,
+      }
+    : sourceMode
+      ? {
+          mode: sourceMode,
+          content: input,
+          sourceUrl: recognizedSourceUrl,
+          authorHandle: null,
+          authorName: null,
+          resolved: false,
+        }
+      : null;
   const configuredCount = health.providers.filter(
     (provider) => provider.configured,
   ).length;
 
   async function generate() {
     if (!input.trim() || isWorking) return;
+    if (!sourceMode) {
+      setError("请先确认这是从 X 复制的原文，还是你自主编写的内容。");
+      return;
+    }
     setStatus("generating");
     setError("");
     setGeneration(null);
@@ -168,9 +213,11 @@ export default function App() {
         : await postJson("/api/generate", {
             input,
             preferences: contentPreferences,
+            sourceMode,
           });
       setDraft(result.draft);
       setGeneration(result);
+      setSourceModeOverride(result.source?.mode || sourceMode);
       setActiveHistory(
         result.historyId
           ? { id: result.historyId, version: result.historyVersion }
@@ -241,6 +288,8 @@ export default function App() {
     return postJson("/api/generate-section", {
       section,
       input,
+      sourceMode,
+      source: activeSource,
       draft,
       currentValue,
       previousCandidates,
@@ -263,7 +312,19 @@ export default function App() {
 
   function loadHistory({ record, version }) {
     const restoredPreferences = normalizeContentPreferences(record.preferences);
+    const restoredSourceMode =
+      normalizeSourceMode(record.source?.mode) ||
+      (record.source?.url ? SOURCE_MODES.X_URL : null);
+    const restoredSource = {
+      mode: restoredSourceMode,
+      content: record.source?.content || "",
+      sourceUrl: record.source?.url || null,
+      authorHandle: record.source?.authorHandle || null,
+      authorName: record.source?.authorName || null,
+      resolved: record.source?.type === "url",
+    };
     setInput(record.source?.content || "");
+    setSourceModeOverride(restoredSourceMode);
     setDraft(version.draft);
     setGeneration({
       provider: version.provider,
@@ -271,6 +332,7 @@ export default function App() {
         version.providerLabel || version.provider || "历史记录",
       model: version.model || "模型未知",
       attempts: [],
+      source: restoredSource,
     });
     setActiveHistory({
       id: record.id,
@@ -302,6 +364,32 @@ export default function App() {
       );
     }
   }
+
+  function handleInputChange(event) {
+    const nextInput = event.target.value;
+    setInput(nextInput);
+    if (!nextInput.trim() || inferSourceMode(nextInput)) {
+      setSourceModeOverride(null);
+    }
+  }
+
+  const sourceStatus =
+    sourceMode === SOURCE_MODES.ORIGINAL
+      ? "自主编写 · 不需要原帖链接"
+      : sourceMode === SOURCE_MODES.X_URL
+        ? "已识别原文链接"
+        : sourceMode === SOURCE_MODES.X_CONTENT && recognizedSourceUrl
+          ? "已识别原文内容和原帖链接"
+          : sourceMode === SOURCE_MODES.X_CONTENT
+            ? "原文内容 · 发布前请补充原帖链接"
+            : "请选择内容来源";
+  const sourcePlaceholder =
+    sourceMode === SOURCE_MODES.ORIGINAL
+      ? "输入你自主编写的内容，例如观点、草稿或文章素材。"
+      : sourceMode === SOURCE_MODES.X_CONTENT ||
+          sourceMode === SOURCE_MODES.X_URL
+        ? "粘贴 X 原文或原帖链接；粘贴原文时，请在末尾附上原帖链接。"
+        : "请先选择内容来源，再粘贴或输入内容。";
 
   return (
     <div className="app-shell">
@@ -353,22 +441,68 @@ export default function App() {
           </div>
 
           <div className="source-content">
-            <label className="input-label" htmlFor="source-input">
-              原始内容
-              <span>{input.length.toLocaleString()} 字符</span>
-            </label>
+            <div
+              className="source-mode-picker"
+              role="group"
+              aria-label="内容来源"
+            >
+              <div className="source-mode-options">
+                <button
+                  type="button"
+                  className={
+                    sourceMode === SOURCE_MODES.X_CONTENT ||
+                    sourceMode === SOURCE_MODES.X_URL
+                      ? "active"
+                      : ""
+                  }
+                  aria-pressed={
+                    sourceMode === SOURCE_MODES.X_CONTENT ||
+                    sourceMode === SOURCE_MODES.X_URL
+                  }
+                  onClick={() => setSourceModeOverride(SOURCE_MODES.X_CONTENT)}
+                  disabled={isWorking || Boolean(detectedSourceMode)}
+                >
+                  从 X 复制的原文
+                </button>
+                <button
+                  type="button"
+                  className={
+                    sourceMode === SOURCE_MODES.ORIGINAL ? "active" : ""
+                  }
+                  aria-pressed={sourceMode === SOURCE_MODES.ORIGINAL}
+                  onClick={() => setSourceModeOverride(SOURCE_MODES.ORIGINAL)}
+                  disabled={isWorking || Boolean(detectedSourceMode)}
+                >
+                  我自主编写的内容
+                </button>
+              </div>
+            </div>
+
             <textarea
               id="source-input"
               value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder="支持完整帖子文本，或单独一条 x.com / twitter.com 帖子链接。"
+              onChange={handleInputChange}
+              aria-label={`输入内容，${input.length.toLocaleString()} 字符`}
+              placeholder={sourcePlaceholder}
               disabled={isWorking}
             />
+
+            {input.trim() && (
+              <p
+                className={`source-mode-status ${
+                  sourceMode === SOURCE_MODES.X_CONTENT && !recognizedSourceUrl
+                    ? "warning"
+                    : ""
+                }`}
+              >
+                {sourceStatus}
+              </p>
+            )}
 
             <button
               className="generate-button"
               onClick={generate}
-              disabled={!input.trim() || isWorking}
+              disabled={!input.trim() || !sourceMode || isWorking}
             >
               <span>{isGenerating ? "正在生成长文…" : "生成小红书长文"}</span>
               {!isGenerating && <ArrowIcon />}
@@ -388,6 +522,15 @@ export default function App() {
                 <span>{historyNotice}</span>
               </div>
             )}
+
+            <div className="source-tips">
+              <h2>使用提示</h2>
+              <ol>
+                <li>链接会先在本地服务端解析成正文。</li>
+                <li>生成通常需要几分钟，请保持此页面打开。</li>
+                <li>生成规则来自当前提示词方案，不满意可分部分重新生成。</li>
+              </ol>
+            </div>
 
             <div className="provider-chain" aria-label="模型调用顺序">
               <strong>自动切换顺序</strong>
@@ -428,15 +571,6 @@ export default function App() {
                 </p>
               )}
             </div>
-
-            <div className="source-tips">
-              <h2>使用提示</h2>
-              <ol>
-                <li>链接会先在本地服务端解析成正文。</li>
-                <li>生成通常需要几分钟，请保持此页面打开。</li>
-                <li>生成规则来自当前提示词方案，不满意可分部分重新生成。</li>
-              </ol>
-            </div>
           </div>
         </section>
 
@@ -466,7 +600,9 @@ export default function App() {
                 <span className="writing-line line-two" />
                 <span className="writing-line line-three" />
                 <h2>
-                  正在深度重构这条 X 帖子
+                  {sourceMode === SOURCE_MODES.ORIGINAL
+                    ? "正在整理这份原创草稿"
+                    : "正在生成公开内容解读"}
                 </h2>
                 <p>
                   正按 Gemini → Groq Qwen → 智谱 GLM → 硅基流动 Qwen →
@@ -477,6 +613,7 @@ export default function App() {
               draft ? (
                 <PublishWorkflow
                   draft={draft}
+                  source={activeSource}
                   historyCount={draftHistory.length}
                   onRestore={restorePreviousDraft}
                   workflowId={workflowId}

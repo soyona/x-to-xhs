@@ -4,6 +4,7 @@ import {
   buildMarkdownBody,
   buildMarkdownFilename,
 } from "../src/markdownExport.js";
+import { appendSourceAttribution } from "../src/xiaohongshuPublish.js";
 
 test("Markdown 导出正文保留结构并补充文件末尾换行", () => {
   const body = "开头正文。\r\n\r\n## 一、核心方法\r\n\r\n- 第一条";
@@ -30,4 +31,18 @@ test("Markdown 文件名使用标题并移除系统非法字符", () => {
     "小红书长文-Claude Code 效率 指南.md",
   );
   assert.equal(buildMarkdownFilename(""), "小红书长文-未命名.md");
+});
+
+test("Markdown 导出保留系统附加的原帖来源", () => {
+  const body = appendSourceAttribution("正文。", {
+    mode: "x-url",
+    sourceUrl: "https://x.com/example/status/123",
+    authorHandle: "example",
+  });
+
+  assert.match(buildMarkdownBody(body), /资料及观点来源：X @example/);
+  assert.match(
+    buildMarkdownBody(body),
+    /原帖：https:\/\/x\.com\/example\/status\/123/,
+  );
 });

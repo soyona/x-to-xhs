@@ -46,6 +46,9 @@ function cleanPreviousCandidates(values) {
 export function buildSectionGenerationPrompt({
   section,
   sourceContent,
+  sourceMode,
+  sourceUrl,
+  authorHandle,
   draft,
   body,
   currentValue,
@@ -58,7 +61,7 @@ export function buildSectionGenerationPrompt({
   const source = boundedText(sourceContent, 20_000);
   const currentDraft = boundedText(draft, 30_000);
   const selectedBody = boundedText(body, 20_000);
-  if (!source) throw new Error("缺少原始 X 内容，无法局部生成。");
+  if (!source) throw new Error("缺少输入内容，无法局部生成。");
   if (!currentDraft) throw new Error("缺少当前草稿，无法局部生成。");
 
   const previous = cleanPreviousCandidates(previousCandidates);
@@ -78,6 +81,11 @@ export function buildSectionGenerationPrompt({
   if (!globalInstructions || !moduleInstructions) {
     throw new Error("当前提示词方案缺少局部生成所需模块。");
   }
+  const sourceMetadata = [
+    `source_mode: ${sourceMode || "x-content"}`,
+    `source_url: ${sourceUrl || "未提供"}`,
+    `author_handle: ${authorHandle ? `@${authorHandle}` : "未提供"}`,
+  ].join("\n");
 
   return `你正在对一份小红书长文执行局部生成。只处理指定步骤，不得改写其他步骤。
 
@@ -104,7 +112,12 @@ ${
 
 ${preferencePrompt}
 
-## 原始 X 内容
+## 结构化来源信息
+<source_metadata>
+${sourceMetadata}
+</source_metadata>
+
+## 输入素材
 ${source}
 
 ## 当前选定正文
