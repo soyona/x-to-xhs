@@ -16,6 +16,8 @@ export function buildMarkdownFilename(title = "") {
 export function buildMarkdownBody(body = "") {
   if (!body) return "";
 
-  const normalized = body.replace(/\r\n?/gu, "\n");
+  const normalized = body
+    .replace(/\r\n?/gu, "\n")
+    .replace(/(?<![=])==([^=\n]+)==(?![=])/gu, "$1");
   return normalized.endsWith("\n") ? normalized : `${normalized}\n`;
 }

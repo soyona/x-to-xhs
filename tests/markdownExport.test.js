@@ -15,6 +15,15 @@ test("Markdown 导出正文保留结构并补充文件末尾换行", () => {
   assert.equal(buildMarkdownBody(""), "");
 });
 
+test("Markdown 导出移除不受支持的成对高亮标记", () => {
+  assert.equal(
+    buildMarkdownBody("理解 ==ReAct 循环== 的工作方式"),
+    "理解 ReAct 循环 的工作方式\n",
+  );
+  assert.equal(buildMarkdownBody("判断 a == b"), "判断 a == b\n");
+  assert.equal(buildMarkdownBody("保留未闭合的 ==标记"), "保留未闭合的 ==标记\n");
+});
+
 test("Markdown 文件名使用标题并移除系统非法字符", () => {
   assert.equal(
     buildMarkdownFilename('  Claude / Code: "效率" 指南?  '),

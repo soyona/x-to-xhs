@@ -209,14 +209,14 @@ function CopyStep({
                     ? "Markdown 正文已导出"
                     : exportStatus === "error"
                       ? "重试导出 Markdown 正文"
-                      : "导出 Markdown 正文"
+                      : "下载 Markdown（部分格式可能不受小红书导入支持）"
                 }
                 aria-label={
                   exportStatus === "success"
                     ? "Markdown 正文已导出"
                     : exportStatus === "error"
                       ? "重试导出 Markdown 正文"
-                      : "导出 Markdown 正文"
+                      : "下载 Markdown（部分格式可能不受小红书导入支持）"
                 }
                 onClick={onExport}
                 disabled={!value || disabled}
@@ -602,7 +602,7 @@ export function PublishWorkflow({
       <CopyStep
         number="02"
         title="输入长文正文"
-        hint="可复制正文，也可导出 Markdown 后在小红书选择「从文件导入」；导入会覆盖编辑器内已有正文。"
+        hint="推荐复制正文以保留完整格式；也可下载 Markdown（部分格式可能不受小红书导入支持）。导入会覆盖编辑器内已有正文。"
         value={fields.body}
         meta={`${fields.counts.body.toLocaleString()}字`}
         copied={copiedStep === "body"}
