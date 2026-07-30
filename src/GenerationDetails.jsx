@@ -2,8 +2,10 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleMinus,
+  X,
   XCircle,
 } from "lucide-react";
+import { useId, useState } from "react";
 
 const FAILURE_LABELS = {
   auth: "Key 无效或没有调用权限",
@@ -49,6 +51,8 @@ export function getRunState(run) {
 
 export function GenerationDetails({ run, placement = "statusbar" }) {
   const { attempts, failedCount, success, degraded } = getRunState(run);
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
   if (!attempts.length) return null;
 
   const summary = run?.failed
@@ -57,14 +61,15 @@ export function GenerationDetails({ run, placement = "statusbar" }) {
       ? `自动切换成功 · 共尝试 ${failedCount + 1} 次`
       : "本次生成详情";
 
-  return (
-    <details className={`generation-details ${placement}`}>
-      <summary>
-        <span>{summary}</span>
-        <ChevronDown aria-hidden="true" />
-      </summary>
-      <div className="generation-details-panel">
-        <div className="generation-details-heading">
+  const panel = (
+    <div
+      className="generation-details-panel"
+      id={panelId}
+      role={placement === "statusbar" ? "dialog" : undefined}
+      aria-label={placement === "statusbar" ? "本次生成详情" : undefined}
+    >
+      <div className="generation-details-heading">
+        <div>
           <strong>
             {run?.failed
               ? "本次生成未完成"
@@ -72,36 +77,86 @@ export function GenerationDetails({ run, placement = "statusbar" }) {
                 ? `最终由 ${success.label} 完成`
                 : `${success?.label || run?.providerLabel || "模型"} 生成成功`}
           </strong>
-          <span>未显示或保存完整 API Key</span>
+          <span>调用记录不显示或保存完整 API Key</span>
         </div>
-        <ol>
-          {attempts.map((attempt, index) => {
-            const AttemptIcon = attemptIcon(attempt);
-            const duration = formatDuration(attempt.durationMs);
-            const metadata = [
-              attempt.statusCode ? `HTTP ${attempt.statusCode}` : null,
-              duration,
-            ].filter(Boolean);
-            return (
-              <li className={attempt.status} key={`${attempt.provider}-${index}`}>
-                <AttemptIcon aria-hidden="true" />
-                <div>
-                  <strong>
-                    {attempt.label || attempt.provider || "模型"}
-                    {attempt.keyIndex && attempt.keyCount
-                      ? ` · Key ${attempt.keyIndex}/${attempt.keyCount}`
-                      : ""}
-                  </strong>
-                  <span>{attemptResult(attempt)}</span>
-                  {metadata.length > 0 && (
-                    <small>{metadata.join(" · ")}</small>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+        {placement === "statusbar" && (
+          <button
+            type="button"
+            className="generation-details-close"
+            aria-label="关闭生成详情"
+            onClick={() => setOpen(false)}
+          >
+            <X aria-hidden="true" />
+          </button>
+        )}
       </div>
+      <ol>
+        {attempts.map((attempt, index) => {
+          const AttemptIcon = attemptIcon(attempt);
+          const duration = formatDuration(attempt.durationMs);
+          const metadata = [
+            attempt.statusCode ? `HTTP ${attempt.statusCode}` : null,
+            duration,
+          ].filter(Boolean);
+          return (
+            <li className={attempt.status} key={`${attempt.provider}-${index}`}>
+              <AttemptIcon aria-hidden="true" />
+              <div>
+                <strong>
+                  {attempt.label || attempt.provider || "模型"}
+                  {attempt.keyIndex && attempt.keyCount
+                    ? ` · Key ${attempt.keyIndex}/${attempt.keyCount}`
+                    : ""}
+                </strong>
+                <span>{attemptResult(attempt)}</span>
+                {metadata.length > 0 && (
+                  <small>{metadata.join(" · ")}</small>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+
+  if (placement === "statusbar") {
+    return (
+      <div
+        className={`generation-details statusbar-details${open ? " open" : ""}`}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) {
+            setOpen(false);
+          }
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            setOpen(false);
+          }
+        }}
+      >
+        <button
+          type="button"
+          className="generation-details-trigger"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((current) => !current)}
+        >
+          <span>{summary}</span>
+          <ChevronDown aria-hidden="true" />
+        </button>
+        {open && panel}
+      </div>
+    );
+  }
+
+  return (
+    <details className={`generation-details ${placement}`}>
+      <summary>
+        <span>{summary}</span>
+        <ChevronDown aria-hidden="true" />
+      </summary>
+      {panel}
     </details>
   );
 }

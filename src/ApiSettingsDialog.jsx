@@ -399,7 +399,7 @@ export function ApiSettingsDialog({
       >
         <div className="settings-dialog-header">
           <div>
-            <span className="settings-eyebrow">本地个性化配置</span>
+            <span className="settings-eyebrow"></span>
             <h2 id="settings-title">设置</h2>
           </div>
           <button

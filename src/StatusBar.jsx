@@ -2,6 +2,7 @@ import {
   GenerationDetails,
   getRunState,
 } from "./GenerationDetails";
+import { LockKeyhole } from "lucide-react";
 
 const TOKEN_NUMBER_FORMAT = new Intl.NumberFormat("zh-CN");
 const DEFAULT_PROVIDER_LABELS = [
@@ -69,17 +70,19 @@ export function StatusBar({
       <div className="statusbar-run" role="status" aria-live="polite">
         {isGenerating ? (
           <>
-            <span>正在按顺序调用模型</span>
+            <span className="statusbar-outcome">正在按顺序调用模型</span>
             <span className="statusbar-token">Token 统计中</span>
           </>
         ) : run?.failed ? (
           <>
-            <span>生成失败，可查看调用详情</span>
+            <span className="statusbar-outcome failed">
+              生成失败，可查看调用详情
+            </span>
             <span className="statusbar-token">Token —</span>
           </>
         ) : run ? (
           <>
-            <span>
+            <span className={`statusbar-outcome${degraded ? " degraded" : ""}`}>
               {degraded
                 ? `已由备用模型完成：${successfulAttempt?.label}`
                 : `本次：${run.providerLabel}`}
@@ -102,12 +105,15 @@ export function StatusBar({
           </>
         ) : (
           <>
-            <span>尚未生成</span>
+            <span className="statusbar-outcome">尚未生成</span>
             <span className="statusbar-token">Token —</span>
           </>
         )}
       </div>
-      <span className="secure-note">API Key 仅保留在本地服务端</span>
+      <span className="secure-note">
+        <LockKeyhole aria-hidden="true" />
+        API Key 仅保留在本地服务端
+      </span>
     </footer>
   );
 }
