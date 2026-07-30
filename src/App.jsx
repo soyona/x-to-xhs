@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiSettingsDialog } from "./ApiSettingsDialog";
 import {
   CONTENT_PREFERENCE_STORAGE_KEY,
@@ -15,6 +15,7 @@ import { replaceWorkflowSection } from "./workflowDraft";
 import { splitXiaohongshuDraft } from "./xiaohongshuPublish";
 import {
   SOURCE_MODES,
+  extractStandaloneHttpUrl,
   extractXStatusUrl,
   inferSourceMode,
   normalizeSourceMode,
@@ -120,12 +121,12 @@ export default function App() {
       : null,
   );
   const [latestRun, setLatestRun] = useState(null);
+  const sourceInputRef = useRef(null);
   const [sourceModeOverride, setSourceModeOverride] = useState(
-    prototypeMode ? SOURCE_MODES.X_CONTENT : null,
+    SOURCE_MODES.X_CONTENT,
   );
   const [draftHistory, setDraftHistory] = useState([]);
   const [workflowId, setWorkflowId] = useState(prototypeMode ? 1 : 0);
-  const [autoGenerateTitles, setAutoGenerateTitles] = useState(prototypeMode);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [activeHistory, setActiveHistory] = useState(null);
@@ -159,6 +160,13 @@ export default function App() {
   const isWorking = isGenerating;
   const detectedSourceMode = useMemo(() => inferSourceMode(input), [input]);
   const detectedSourceUrl = useMemo(() => extractXStatusUrl(input), [input]);
+  const standaloneInputUrl = useMemo(
+    () => extractStandaloneHttpUrl(input),
+    [input],
+  );
+  const unsupportedStandaloneUrl = Boolean(
+    standaloneInputUrl && !detectedSourceUrl,
+  );
   const sourceMode =
     detectedSourceMode || normalizeSourceMode(sourceModeOverride);
   const recognizedSourceUrl =
@@ -187,6 +195,10 @@ export default function App() {
 
   async function generate() {
     if (!input.trim() || isWorking) return;
+    if (unsupportedStandaloneUrl) {
+      setError("暂不支持读取非 X 网页链接，请粘贴文章正文后再生成。");
+      return;
+    }
     if (!sourceMode) {
       setError("请先确认这是从 X 复制的原文，还是你自主编写的内容。");
       return;
@@ -227,7 +239,6 @@ export default function App() {
           : null,
       );
       setHistoryNotice(getHistoryNotice(result));
-      setAutoGenerateTitles(true);
       setWorkflowId((current) => current + 1);
       setStatus("done");
     } catch (generationError) {
@@ -277,7 +288,6 @@ export default function App() {
     setDraftHistory((history) => history.slice(0, -1));
     setError("");
     setStatus("done");
-    setAutoGenerateTitles(false);
     setWorkflowId((current) => current + 1);
   }
 
@@ -368,7 +378,6 @@ export default function App() {
     );
     setError("");
     setStatus("done");
-    setAutoGenerateTitles(false);
     setWorkflowId((current) => current + 1);
     setHistoryOpen(false);
   }
@@ -385,21 +394,29 @@ export default function App() {
   function handleInputChange(event) {
     const nextInput = event.target.value;
     setInput(nextInput);
-    if (!nextInput.trim() || inferSourceMode(nextInput)) {
-      setSourceModeOverride(null);
+    if (
+      !nextInput.trim() ||
+      inferSourceMode(nextInput) ||
+      extractStandaloneHttpUrl(nextInput)
+    ) {
+      setSourceModeOverride(
+        nextInput.trim() ? null : SOURCE_MODES.X_CONTENT,
+      );
     }
   }
 
   const sourceStatus =
-    sourceMode === SOURCE_MODES.ORIGINAL
-      ? "自主编写 · 不需要原帖链接"
+    unsupportedStandaloneUrl
+      ? "暂不支持读取非 X 网页链接，请粘贴文章正文"
+      : sourceMode === SOURCE_MODES.ORIGINAL
+      ? ""
       : sourceMode === SOURCE_MODES.X_URL
-        ? "已识别原文链接"
+        ? "已识别 X 原帖链接"
         : sourceMode === SOURCE_MODES.X_CONTENT && recognizedSourceUrl
-          ? "已识别原文内容和原帖链接"
+          ? "已识别原文内容和 X 原帖链接"
           : sourceMode === SOURCE_MODES.X_CONTENT
-            ? "原文内容 · 发布前请补充原帖链接"
-            : "请选择内容来源";
+            ? "缺少原帖链接，发布前需补充"
+            : "";
   const sourcePlaceholder =
     sourceMode === SOURCE_MODES.ORIGINAL
       ? "输入你自主编写的内容，例如观点、草稿或文章素材。"
@@ -407,6 +424,20 @@ export default function App() {
           sourceMode === SOURCE_MODES.X_URL
         ? "粘贴 X 原文或原帖链接；粘贴原文时，请在末尾附上原帖链接。"
         : "请先选择内容来源，再粘贴或输入内容。";
+  const needsSourceUrl =
+    Boolean(input.trim()) &&
+    sourceMode === SOURCE_MODES.X_CONTENT &&
+    !recognizedSourceUrl &&
+    !unsupportedStandaloneUrl;
+  const canSupplementSourceUrl = needsSourceUrl && !isWorking;
+
+  function focusSourceInputForUrl() {
+    const inputElement = sourceInputRef.current;
+    if (!inputElement) return;
+    inputElement.focus();
+    inputElement.setSelectionRange(input.length, input.length);
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -452,7 +483,7 @@ export default function App() {
           <div className="panel-header">
             <div className="panel-title">
               <span className="step-number">01</span>
-              <h1 id="source-heading">原始素材</h1>
+              <h1 id="source-heading">素材创作</h1>
             </div>
           </div>
 
@@ -476,9 +507,13 @@ export default function App() {
                     sourceMode === SOURCE_MODES.X_URL
                   }
                   onClick={() => setSourceModeOverride(SOURCE_MODES.X_CONTENT)}
-                  disabled={isWorking || Boolean(detectedSourceMode)}
+                  disabled={
+                    isWorking ||
+                    Boolean(detectedSourceMode) ||
+                    unsupportedStandaloneUrl
+                  }
                 >
-                  从 X 复制的原文
+                  原始素材
                 </button>
                 <button
                   type="button"
@@ -487,38 +522,63 @@ export default function App() {
                   }
                   aria-pressed={sourceMode === SOURCE_MODES.ORIGINAL}
                   onClick={() => setSourceModeOverride(SOURCE_MODES.ORIGINAL)}
-                  disabled={isWorking || Boolean(detectedSourceMode)}
+                  disabled={
+                    isWorking ||
+                    Boolean(detectedSourceMode) ||
+                    unsupportedStandaloneUrl
+                  }
                 >
-                  我自主编写的内容
+                  自主创作
                 </button>
               </div>
             </div>
 
-            <textarea
-              id="source-input"
-              value={input}
-              onChange={handleInputChange}
-              aria-label={`输入内容，${input.length.toLocaleString()} 字符`}
-              placeholder={sourcePlaceholder}
-              disabled={isWorking}
-            />
+            <div className="source-input-shell">
+              <textarea
+                ref={sourceInputRef}
+                id="source-input"
+                value={input}
+                onChange={handleInputChange}
+                aria-label={`输入内容，${input.length.toLocaleString()} 字符`}
+                placeholder={sourcePlaceholder}
+                disabled={isWorking}
+              />
+              <span className="source-character-count" aria-hidden="true">
+                {input.length.toLocaleString()} 字符
+              </span>
+            </div>
 
-            {input.trim() && (
+            {input.trim() && sourceStatus && (
               <p
                 className={`source-mode-status ${
-                  sourceMode === SOURCE_MODES.X_CONTENT && !recognizedSourceUrl
+                  unsupportedStandaloneUrl ||
+                  needsSourceUrl
                     ? "warning"
                     : ""
                 }`}
               >
-                {sourceStatus}
+                <span>{sourceStatus}</span>
+                {canSupplementSourceUrl && (
+                  <button
+                    type="button"
+                    onClick={focusSourceInputForUrl}
+                    aria-label="在原文末尾补充原帖链接"
+                  >
+                    补充链接
+                  </button>
+                )}
               </p>
             )}
 
             <button
               className="generate-button"
               onClick={generate}
-              disabled={!input.trim() || !sourceMode || isWorking}
+              disabled={
+                !input.trim() ||
+                !sourceMode ||
+                unsupportedStandaloneUrl ||
+                isWorking
+              }
             >
               <span>{isGenerating ? "正在生成长文…" : "生成小红书长文"}</span>
               {!isGenerating && <ArrowIcon />}
@@ -539,15 +599,6 @@ export default function App() {
               </div>
             )}
 
-            <div className="source-tips">
-              <h2>使用提示</h2>
-              <ol>
-                <li>链接会先在本地服务端解析成正文。</li>
-                <li>生成通常需要几分钟，请保持此页面打开。</li>
-                <li>生成规则来自当前提示词方案，不满意可分部分重新生成。</li>
-              </ol>
-            </div>
-
           </div>
         </section>
 
@@ -556,7 +607,6 @@ export default function App() {
             <div className="panel-title">
               <span className="step-number">02</span>
               <h2 id="draft-heading">小红书长文</h2>
-              <span className="format-label">按发布流程分段复制</span>
             </div>
             <div className="toolbar-actions">
                   {draft && (
@@ -581,10 +631,7 @@ export default function App() {
                     ? "正在整理这份原创草稿"
                     : "正在生成公开内容解读"}
                 </h2>
-                <p>
-                  正按 Gemini → Groq Qwen → 智谱 GLM → 硅基流动 Qwen →
-                  OpenRouter Free 自动尝试，并生成完整长文。
-                </p>
+                <p>正在生成，请保持页面打开。</p>
               </div>
             ) : (
               draft ? (
@@ -594,7 +641,6 @@ export default function App() {
                   historyCount={draftHistory.length}
                   onRestore={restorePreviousDraft}
                   workflowId={workflowId}
-                  autoGenerateTitles={autoGenerateTitles}
                   onGenerateSection={generateWorkflowSection}
                   onApplySection={applyWorkflowSection}
                 />

@@ -39,6 +39,9 @@ function PromptSettings({
   const [draftName, setDraftName] = useState("系统默认");
   const [draftModules, setDraftModules] = useState({});
   const [activeModule, setActiveModule] = useState("title");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [messageTone, setMessageTone] = useState("info");
+  const [saveComplete, setSaveComplete] = useState(false);
 
   useEffect(() => {
     const profile = selectedPromptProfile(promptState);
@@ -46,7 +49,14 @@ function PromptSettings({
     setDraftId(profile.id);
     setDraftName(profile.name);
     setDraftModules({ ...profile.modules });
+    setConfirmingDelete(false);
   }, [promptState]);
+
+  useEffect(() => {
+    if (!saveComplete) return undefined;
+    const timeout = window.setTimeout(() => setSaveComplete(false), 2000);
+    return () => window.clearTimeout(timeout);
+  }, [saveComplete]);
 
   if (!promptState) {
     return (
@@ -65,15 +75,21 @@ function PromptSettings({
     setMessage("");
     try {
       await onUpdatePrompts(action);
+      setMessageTone("success");
       setMessage(successMessage);
+      return true;
     } catch (error) {
+      setMessageTone("error");
       setMessage(error.message);
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
   async function selectProfile(event) {
+    setConfirmingDelete(false);
+    setSaveComplete(false);
     await runPromptAction(
       { action: "select", id: event.target.value },
       "提示词方案已切换。",
@@ -82,7 +98,8 @@ function PromptSettings({
 
   async function saveProfile(event) {
     event.preventDefault();
-    await runPromptAction(
+    setSaveComplete(false);
+    const saved = await runPromptAction(
       {
         action: "save",
         profile: {
@@ -93,22 +110,26 @@ function PromptSettings({
       },
       isDefault || isNew ? "自定义方案已创建并启用。" : "提示词方案已保存。",
     );
+    if (saved) setSaveComplete(true);
   }
 
   async function deleteProfile() {
     if (isDefault || isNew) return;
-    if (!window.confirm(`确定删除提示词方案“${draftName}”吗？`)) return;
-    await runPromptAction(
+    const deleted = await runPromptAction(
       { action: "delete", id: draftId },
       "自定义方案已删除，已切换到系统默认。",
     );
+    if (deleted) setConfirmingDelete(false);
   }
 
   function createCopy() {
     const profile = selectedPromptProfile(promptState);
+    setConfirmingDelete(false);
+    setSaveComplete(false);
     setDraftId("new");
     setDraftName(`${profile?.name || "提示词方案"} 副本`);
     setDraftModules({ ...(profile?.modules || promptState.defaultProfile.modules) });
+    setMessageTone("info");
     setMessage("正在编辑新方案，保存后才会启用。");
   }
 
@@ -117,6 +138,8 @@ function PromptSettings({
       ...current,
       [activeModule]: promptState.defaultProfile.modules[activeModule],
     }));
+    setSaveComplete(false);
+    setMessage("");
   }
 
   async function migrateLegacyInstructions() {
@@ -138,8 +161,10 @@ function PromptSettings({
       });
       onMigrateLegacyInstructions();
       setDraftModules(migratedModules);
+      setMessageTone("success");
       setMessage("旧版补充指令已迁移到当前方案的全局规则。");
     } catch (error) {
+      setMessageTone("error");
       setMessage(error.message);
     } finally {
       setSaving(false);
@@ -147,14 +172,23 @@ function PromptSettings({
   }
 
   return (
-    <form className="settings-form" onSubmit={saveProfile}>
+    <form
+      className="settings-form"
+      onSubmit={saveProfile}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && confirmingDelete) {
+          event.stopPropagation();
+          setConfirmingDelete(false);
+        }
+      }}
+    >
       <div className="prompt-settings">
         {legacyInstructions?.trim() && (
           <div className="legacy-instructions-note">
             <div>
               <strong>检测到旧版补充创作指令</strong>
               <span>
-                当前仍会继续生效。迁移后将写入全局规则，并从快速设置中移除。
+                当前仍会继续生效。迁移后将写入全局规则，并从表达偏好中移除。
               </span>
             </div>
             <button
@@ -167,11 +201,6 @@ function PromptSettings({
             </button>
           </div>
         )}
-        <p className="preference-note">
-          修改全局规则或任一内容模块，即可影响完整生成和对应的局部重新生成。固定输出协议由
-          系统保护，系统默认来自 Long-form-post-prompt.md。
-        </p>
-
         <div className="prompt-profile-toolbar">
           <label htmlFor="prompt-profile-select">
             当前方案
@@ -205,7 +234,11 @@ function PromptSettings({
             id="prompt-profile-name"
             value={draftName}
             maxLength={40}
-            onChange={(event) => setDraftName(event.target.value)}
+            onChange={(event) => {
+              setDraftName(event.target.value);
+              setSaveComplete(false);
+              setMessage("");
+            }}
             disabled={saving || isDefault}
             required
           />
@@ -231,51 +264,96 @@ function PromptSettings({
           <textarea
             id="prompt-module-editor"
             value={draftModules[activeModule] || ""}
-            onChange={(event) =>
+            onChange={(event) => {
               setDraftModules((current) => ({
                 ...current,
                 [activeModule]: event.target.value,
-              }))
-            }
+              }));
+              setSaveComplete(false);
+              setMessage("");
+            }}
             disabled={saving}
             spellCheck="false"
           />
           <span>{(draftModules[activeModule] || "").length.toLocaleString()} 字符</span>
         </label>
 
-        {message && (
-          <p className="settings-message" role="status">
-            {message}
-          </p>
-        )}
       </div>
 
-      <div className="settings-actions preference-actions">
-        <button
-          className="settings-reset"
-          type="button"
-          onClick={resetActiveModule}
-          disabled={saving}
+      {message && (
+        <p
+          className={`settings-message prompt-action-message is-${messageTone}`}
+          role={messageTone === "error" ? "alert" : "status"}
         >
-          当前模块恢复默认
-        </button>
-        {!isDefault && !isNew && (
+          {message}
+        </p>
+      )}
+
+      <div className="settings-actions preference-actions">
+        {!confirmingDelete && (
           <button
-            className="settings-cancel"
+            className="settings-reset"
             type="button"
-            onClick={deleteProfile}
+            onClick={resetActiveModule}
             disabled={saving}
           >
-            删除方案
+            当前模块恢复默认
           </button>
         )}
-        <button className="settings-save" type="submit" disabled={saving}>
-          {saving
-            ? "正在保存…"
-            : isDefault || isNew
-              ? "保存为新方案"
-              : "保存方案"}
-        </button>
+        {confirmingDelete ? (
+          <div
+            className="settings-delete-confirm"
+            role="group"
+            aria-label={`确认删除提示词方案“${draftName}”`}
+          >
+            <span>
+              删除“{draftName}”？删除后不可恢复。
+            </span>
+            <button
+              className="settings-cancel"
+              type="button"
+              onClick={() => setConfirmingDelete(false)}
+              disabled={saving}
+            >
+              取消
+            </button>
+            <button
+              className="settings-delete-confirm-button"
+              type="button"
+              onClick={deleteProfile}
+              disabled={saving}
+              autoFocus
+            >
+              {saving ? "正在删除…" : "确认删除"}
+            </button>
+          </div>
+        ) : (
+          <>
+            {!isDefault && !isNew && (
+              <button
+                className="settings-cancel"
+                type="button"
+                onClick={() => {
+                  setSaveComplete(false);
+                  setMessage("");
+                  setConfirmingDelete(true);
+                }}
+                disabled={saving}
+              >
+                删除方案
+              </button>
+            )}
+            <button className="settings-save" type="submit" disabled={saving}>
+              {saving
+                ? "正在保存…"
+                : saveComplete
+                  ? "已保存"
+                  : isDefault || isNew
+                    ? "保存为新方案"
+                    : "保存方案"}
+            </button>
+          </>
+        )}
       </div>
     </form>
   );
@@ -376,7 +454,7 @@ export function ApiSettingsDialog({
   function submitPreferences(event) {
     event.preventDefault();
     onSavePreferences(normalizeContentPreferences(preferenceDraft));
-    setPreferenceMessage("快速设置已保存，将在下次生成或重新生成时生效。");
+    setPreferenceMessage("表达偏好已保存，将在下次生成或重新生成时生效。");
   }
 
   function clearLegacyInstructions() {
@@ -444,10 +522,6 @@ export function ApiSettingsDialog({
 
         {activeTab === "creation" ? (
           <div className="creation-settings">
-            <p className="creation-settings-intro">
-              先用快速设置调整本次表达；需要长期复用或精细控制时，再编辑高级提示词。
-            </p>
-
             <div
               className="creation-mode-switch"
               role="tablist"
@@ -460,11 +534,7 @@ export function ApiSettingsDialog({
                 className={creationMode === "quick" ? "active" : ""}
                 onClick={() => setCreationMode("quick")}
               >
-                <span>
-                  <strong>快速设置</strong>
-                  <small>适合每篇文章快速调整</small>
-                </span>
-                <b>低风险</b>
+                <strong>表达偏好</strong>
               </button>
               <button
                 type="button"
@@ -473,21 +543,13 @@ export function ApiSettingsDialog({
                 className={creationMode === "advanced" ? "active" : ""}
                 onClick={() => setCreationMode("advanced")}
               >
-                <span>
-                  <strong>高级提示词</strong>
-                  <small>用于建立长期复用的生成规则</small>
-                </span>
-                <b>高级</b>
+                <strong>提示词方案</strong>
               </button>
             </div>
 
             {creationMode === "quick" ? (
               <form className="settings-form" onSubmit={submitPreferences}>
                 <div className="preference-settings">
-                  <p className="preference-note">
-                    调整读者、语气和内容侧重；与提示词中的同类表达偏好冲突时，以这里为准。
-                  </p>
-
                   <div className="preference-grid">
                     {CONTENT_PREFERENCE_FIELDS.map((field) => (
                       <label key={field.id} htmlFor={`preference-${field.id}`}>
@@ -559,7 +621,7 @@ export function ApiSettingsDialog({
                     恢复默认
                   </button>
                   <button className="settings-save" type="submit">
-                    保存快速设置
+                    保存偏好
                   </button>
                 </div>
               </form>
@@ -578,11 +640,6 @@ export function ApiSettingsDialog({
           </div>
         ) : (
           <form className="settings-form" onSubmit={submitProviders}>
-            <p className="settings-security-note">
-              Key 仅保存到本机服务端的 .env 文件；页面不会读取或回显完整 Key。
-              移除只会删除本机配置，不会停用供应商端 Key。
-            </p>
-
             <div className="settings-provider-list">
               {health.providers.map((provider, index) => {
                 const value = providers[provider.id] || {

@@ -24,6 +24,7 @@ import { createPromptStore } from "./promptStore.mjs";
 import {
   SOURCE_MODES,
   authorHandleFromUrl,
+  extractStandaloneHttpUrl,
   extractXStatusUrl,
   inferSourceMode,
   normalizeSourceMode,
@@ -288,11 +289,17 @@ export async function resolveSource(input, requestedMode) {
   const trimmed = input?.trim();
   if (!trimmed) throw new Error("请先粘贴 X 帖子内容或 URL。");
   const detectedMode = inferSourceMode(trimmed);
+  const standaloneUrl = extractStandaloneHttpUrl(trimmed);
+  const sourceUrl = extractXStatusUrl(trimmed);
+  if (standaloneUrl && !sourceUrl) {
+    throw new Error(
+      "暂不支持读取非 X 网页链接，请粘贴文章正文后再生成。",
+    );
+  }
   const mode =
     normalizeSourceMode(requestedMode) ||
     detectedMode ||
     SOURCE_MODES.X_CONTENT;
-  const sourceUrl = extractXStatusUrl(trimmed);
 
   if (mode === SOURCE_MODES.ORIGINAL) {
     return {

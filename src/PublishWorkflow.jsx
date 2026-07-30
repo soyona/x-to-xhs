@@ -140,6 +140,7 @@ function CopyStep({
   exportStatus = "",
   onExport,
   generationControls,
+  copyFeedback,
   children,
   previewSize = "compact",
   warning = false,
@@ -198,7 +199,16 @@ function CopyStep({
       <div className={`publish-copy-area is-${previewSize}`}>
         <div className="publish-copy-toolbar">
           <div className="publish-copy-toolbar-meta">
-            <span>内容预览</span>
+            {copyFeedback ? (
+              <span
+                className={`copy-feedback is-${copyFeedback.tone}`}
+                role={copyFeedback.tone === "error" ? "alert" : "status"}
+              >
+                {copyFeedback.message}
+              </span>
+            ) : (
+              <span>内容预览</span>
+            )}
           </div>
           <div className="publish-copy-actions">
             {hasMarkdownModes && (
@@ -363,7 +373,6 @@ export function PublishWorkflow({
   historyCount,
   onRestore,
   workflowId,
-  autoGenerateTitles,
   onGenerateSection,
   onApplySection,
 }) {
@@ -377,6 +386,8 @@ export function PublishWorkflow({
     [attributedBody],
   );
   const [copiedStep, setCopiedStep] = useState("");
+  const [copyFeedback, setCopyFeedback] = useState(null);
+  const copyFeedbackTokenRef = useRef(0);
   const [exportStatus, setExportStatus] = useState("");
   const [bodyVersion, setBodyVersion] = useState(1);
   const [sectionBodyVersions, setSectionBodyVersions] = useState({
@@ -386,69 +397,21 @@ export function PublishWorkflow({
   const [sectionGenerations, setSectionGenerations] = useState(
     initialSectionGenerations,
   );
-  const initializedWorkflowRef = useRef(null);
-  const automaticRequestTokenRef = useRef(0);
 
   useEffect(() => {
+    copyFeedbackTokenRef.current += 1;
     setCopiedStep("");
+    setCopyFeedback(null);
     setExportStatus("");
   }, [draft]);
 
   useEffect(() => {
-    if (initializedWorkflowRef.current === workflowId) return;
-    initializedWorkflowRef.current = workflowId;
-    automaticRequestTokenRef.current += 1;
-    const requestToken = automaticRequestTokenRef.current;
     setBodyVersion(1);
     setSectionBodyVersions({
       description: 1,
       tags: 1,
     });
     setSectionGenerations(initialSectionGenerations());
-    if (!autoGenerateTitles) return;
-
-    async function loadInitialCandidates(section, currentValue) {
-      setSectionGenerations((current) => ({
-        ...current,
-        [section]: {
-          ...current[section],
-          status: "generating",
-          error: "",
-        },
-      }));
-      try {
-        const result = await onGenerateSection({
-          section,
-          currentValue,
-          previousCandidates: [],
-        });
-        if (automaticRequestTokenRef.current !== requestToken) return;
-        setSectionGenerations((current) => ({
-          ...current,
-          [section]: {
-            status: "ready",
-            candidates: result.candidates,
-            error: "",
-            sourceMode: result.sourceMode || "content-only",
-            sourceUpdatedAt: result.sourceUpdatedAt || null,
-          },
-        }));
-        const preferred = result.candidates[0];
-        onApplySection(section, preferred);
-      } catch (generationError) {
-        if (automaticRequestTokenRef.current !== requestToken) return;
-        setSectionGenerations((current) => ({
-          ...current,
-          [section]: {
-            ...current[section],
-            status: "error",
-            error: generationError.message,
-          },
-        }));
-      }
-    }
-
-    void loadInitialCandidates("longform-title", fields.longformTitle);
   }, [workflowId]);
 
   async function regenerateSection(section) {
@@ -562,31 +525,57 @@ export function PublishWorkflow({
 
   async function copyField(step, value, { richText = false } = {}) {
     if (!value) return;
-    if (
-      richText &&
-      navigator.clipboard.write &&
-      typeof window.ClipboardItem === "function"
-    ) {
-      try {
-        const plainText = toXiaohongshuPlainText(value);
-        const richHtml = toXiaohongshuRichHtml(value);
-        await navigator.clipboard.write([
-          new window.ClipboardItem({
-            "text/plain": new Blob([plainText], { type: "text/plain" }),
-            "text/html": new Blob([richHtml], { type: "text/html" }),
-          }),
-        ]);
-      } catch {
-        await navigator.clipboard.writeText(toXiaohongshuPlainText(value));
+    let feedbackMessage = "已复制";
+    try {
+      if (
+        richText &&
+        navigator.clipboard?.write &&
+        typeof window.ClipboardItem === "function"
+      ) {
+        try {
+          const plainText = toXiaohongshuPlainText(value);
+          const richHtml = toXiaohongshuRichHtml(value);
+          await navigator.clipboard.write([
+            new window.ClipboardItem({
+              "text/plain": new Blob([plainText], { type: "text/plain" }),
+              "text/html": new Blob([richHtml], { type: "text/html" }),
+            }),
+          ]);
+          feedbackMessage = "已复制富文本";
+        } catch {
+          await navigator.clipboard.writeText(toXiaohongshuPlainText(value));
+          feedbackMessage = "已复制纯文本";
+        }
+      } else {
+        await navigator.clipboard.writeText(
+          richText ? toXiaohongshuPlainText(value) : value,
+        );
+        if (richText) feedbackMessage = "已复制纯文本";
       }
-    } else {
-      await navigator.clipboard.writeText(
-        richText ? toXiaohongshuPlainText(value) : value,
-      );
+    } catch {
+      const token = ++copyFeedbackTokenRef.current;
+      setCopyFeedback({
+        step,
+        tone: "error",
+        message: "复制失败，请重试",
+      });
+      window.setTimeout(() => {
+        if (copyFeedbackTokenRef.current === token) setCopyFeedback(null);
+      }, 2400);
+      return;
     }
+
+    const token = ++copyFeedbackTokenRef.current;
     setCopiedStep(step);
+    setCopyFeedback({
+      step,
+      tone: "success",
+      message: feedbackMessage,
+    });
     window.setTimeout(() => {
-      setCopiedStep((current) => (current === step ? "" : current));
+      if (copyFeedbackTokenRef.current !== token) return;
+      setCopiedStep("");
+      setCopyFeedback(null);
     }, 1800);
   }
 
@@ -625,13 +614,6 @@ export function PublishWorkflow({
         onRestore={onRestore}
       />
 
-      <div className="workflow-intro">
-        <strong>按发布流程分段复制，不满意可重新生成对应内容</strong>
-        <p>
-          复制正文时优先转换为富文本，平台不支持时自动使用无井号纯文本。
-        </p>
-      </div>
-
       <CopyStep
         number="01"
         title="输入长文标题"
@@ -639,6 +621,9 @@ export function PublishWorkflow({
         value={fields.longformTitle}
         meta={`${fields.counts.longformTitle}字`}
         copied={copiedStep === "longform-title"}
+        copyFeedback={
+          copyFeedback?.step === "longform-title" ? copyFeedback : null
+        }
         onCopy={() => copyField("longform-title", fields.longformTitle)}
         copyLabel="复制标题"
         copyAriaLabel="复制长文标题"
@@ -656,6 +641,7 @@ export function PublishWorkflow({
         value={attributedBody}
         meta={`${countPlatformCharacters(attributedBody).toLocaleString()}字`}
         copied={copiedStep === "body"}
+        copyFeedback={copyFeedback?.step === "body" ? copyFeedback : null}
         onCopy={() => copyField("body", attributedBody, { richText: true })}
         copyLabel="复制正文"
         copyAriaLabel="复制长文正文"
@@ -687,6 +673,9 @@ export function PublishWorkflow({
         meta={`${fields.counts.description}/1000字`}
         warning={fields.counts.description > 1000}
         copied={copiedStep === "description"}
+        copyFeedback={
+          copyFeedback?.step === "description" ? copyFeedback : null
+        }
         onCopy={() => copyField("description", fields.description)}
         copyLabel="复制描述"
         previewSize="description"
@@ -709,6 +698,7 @@ export function PublishWorkflow({
         value={fields.tags}
         meta={`${fields.counts.tags}个`}
         copied={copiedStep === "tags"}
+        copyFeedback={copyFeedback?.step === "tags" ? copyFeedback : null}
         onCopy={() => copyField("tags", fields.tags)}
         copyLabel="复制标签"
         generationControls={generationControls("tags", fields.tags)}

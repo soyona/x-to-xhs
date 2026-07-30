@@ -33,6 +33,19 @@ export function extractXStatusUrl(value = "") {
   }
 }
 
+export function extractStandaloneHttpUrl(value = "") {
+  const candidate = String(value)
+    .trim()
+    .replace(TRAILING_URL_PUNCTUATION, "");
+  if (!candidate) return null;
+  try {
+    const url = new URL(candidate);
+    return ["http:", "https:"].includes(url.protocol) ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 export function inferSourceMode(value = "") {
   const trimmed = String(value).trim();
   if (!trimmed) return null;

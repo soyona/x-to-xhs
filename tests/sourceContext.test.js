@@ -4,6 +4,7 @@ import { resolveSource } from "../server.mjs";
 import {
   SOURCE_MODES,
   authorHandleFromUrl,
+  extractStandaloneHttpUrl,
   extractXStatusUrl,
   inferSourceMode,
   withoutStandaloneSourceUrl,
@@ -28,6 +29,32 @@ test("无链接纯文本保持待确认且可移除独立来源链接行", () =>
   assert.equal(
     withoutStandaloneSourceUrl(`第一段。\n\n${sourceUrl}`, sourceUrl),
     "第一段。",
+  );
+});
+
+test("识别独立网页 URL，但不把正文中的链接误判为独立 URL", () => {
+  const articleUrl =
+    "https://openai.com/zh-Hans-CN/index/harness-engineering/";
+
+  assert.equal(extractStandaloneHttpUrl(articleUrl), articleUrl);
+  assert.equal(extractStandaloneHttpUrl(`${articleUrl}。`), articleUrl);
+  assert.equal(
+    extractStandaloneHttpUrl(`这是正文。\n\n来源：${articleUrl}`),
+    null,
+  );
+});
+
+test("服务端拒绝把独立的非 X 网页链接当作原文生成", async () => {
+  const articleUrl =
+    "https://openai.com/zh-Hans-CN/index/harness-engineering/";
+
+  await assert.rejects(
+    resolveSource(articleUrl, SOURCE_MODES.X_CONTENT),
+    /暂不支持读取非 X 网页链接，请粘贴文章正文后再生成/,
+  );
+  await assert.rejects(
+    resolveSource(articleUrl, SOURCE_MODES.ORIGINAL),
+    /暂不支持读取非 X 网页链接，请粘贴文章正文后再生成/,
   );
 });
 

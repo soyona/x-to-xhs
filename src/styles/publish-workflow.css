@@ -6,22 +6,6 @@
   padding: 20px clamp(14px, 2vw, 24px) 48px;
 }
 
-.workflow-intro {
-  border-left: 3px solid var(--accent);
-  padding: 4px 0 4px 13px;
-}
-
-.workflow-intro strong {
-  font-size: 14px;
-}
-
-.workflow-intro p {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
 .publish-step {
   position: relative;
   min-width: 0;
@@ -117,6 +101,14 @@
   color: var(--soft-muted);
   font-size: 10px;
   font-weight: 750;
+}
+
+.copy-feedback.is-success {
+  color: #47705a;
+}
+
+.copy-feedback.is-error {
+  color: #9f2d27;
 }
 
 .markdown-mode-toggle {
@@ -962,7 +954,7 @@
 
 .statusbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(0, auto) auto;
+  grid-template-columns: minmax(220px, 1fr) minmax(0, auto);
   gap: 12px;
   border-top: 1px solid var(--border);
   padding: 0 18px;
@@ -1211,19 +1203,4 @@
 .generation-details li small {
   color: var(--muted);
   font-size: 9px;
-}
-
-.secure-note {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  justify-self: end;
-  color: #747b85;
-  font-weight: 600;
-}
-
-.secure-note svg {
-  width: 13px;
-  height: 13px;
-  color: #5f7f6d;
 }

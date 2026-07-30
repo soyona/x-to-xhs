@@ -2,8 +2,6 @@ import {
   GenerationDetails,
   getRunState,
 } from "./GenerationDetails";
-import { LockKeyhole } from "lucide-react";
-
 const TOKEN_NUMBER_FORMAT = new Intl.NumberFormat("zh-CN");
 const DEFAULT_PROVIDER_LABELS = [
   "Gemini",
@@ -104,16 +102,9 @@ export function StatusBar({
             )}
           </>
         ) : (
-          <>
-            <span className="statusbar-outcome">尚未生成</span>
-            <span className="statusbar-token">Token —</span>
-          </>
+          <span className="statusbar-outcome">等待生成</span>
         )}
       </div>
-      <span className="secure-note">
-        <LockKeyhole aria-hidden="true" />
-        API Key 仅保留在本地服务端
-      </span>
     </footer>
   );
 }

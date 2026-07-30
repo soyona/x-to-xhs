@@ -7,9 +7,6 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, auto);
   }
 
-  .secure-note {
-    display: none;
-  }
 }
 
 @media (max-width: 760px) {
@@ -55,8 +52,13 @@
     flex-basis: 100px;
   }
 
-  .source-tips {
-    display: none;
+  .source-input-shell {
+    min-height: 0;
+    flex-basis: 100px;
+  }
+
+  .source-input-shell textarea {
+    flex-basis: auto;
   }
 
   .draft-panel {
@@ -75,7 +77,6 @@
     padding: 0 12px;
   }
 
-  .format-label,
   .prompt-profile-summary {
     display: none;
   }
@@ -272,10 +273,6 @@
     white-space: nowrap;
   }
 
-  .secure-note {
-    display: none;
-  }
-
   .statusbar-chain {
     display: flex;
     overflow: visible;
@@ -381,10 +378,6 @@
     margin: 0 16px 12px;
   }
 
-  .settings-security-note {
-    margin: 0 16px 12px;
-  }
-
   .settings-provider-list {
     padding: 0 16px 12px;
   }
@@ -395,10 +388,6 @@
 
   .creation-settings {
     padding: 0 16px 14px;
-  }
-
-  .creation-mode-switch > button b {
-    display: none;
   }
 
   .prompt-settings {
@@ -481,16 +470,6 @@
   .source-content {
     padding-top: 14px;
     padding-bottom: 14px;
-  }
-
-  .source-tips {
-    margin-top: 10px;
-    padding-top: 8px;
-  }
-
-  .source-tips ol {
-    font-size: 11px;
-    line-height: 1.5;
   }
 
   .statusbar-token-breakdown {

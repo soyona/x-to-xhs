@@ -5,7 +5,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 const FAILURE_LABELS = {
   auth: "Key 无效或没有调用权限",
@@ -53,6 +53,23 @@ export function GenerationDetails({ run, placement = "statusbar" }) {
   const { attempts, failedCount, success, degraded } = getRunState(run);
   const [open, setOpen] = useState(false);
   const panelId = useId();
+  const detailsRef = useRef(null);
+
+  useEffect(() => {
+    if (!open || placement !== "statusbar") return undefined;
+
+    function closeOnOutsidePointer(event) {
+      if (!detailsRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+    };
+  }, [open, placement]);
+
   if (!attempts.length) return null;
 
   const summary = run?.failed
@@ -123,12 +140,8 @@ export function GenerationDetails({ run, placement = "statusbar" }) {
   if (placement === "statusbar") {
     return (
       <div
+        ref={detailsRef}
         className={`generation-details statusbar-details${open ? " open" : ""}`}
-        onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget)) {
-            setOpen(false);
-          }
-        }}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             setOpen(false);
