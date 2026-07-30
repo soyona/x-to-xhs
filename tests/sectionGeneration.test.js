@@ -15,7 +15,7 @@ const promptModules = {
   tags: "标签必须与正文直接相关。",
 };
 
-test("局部生成提示词包含步骤约束、当前正文、偏好和旧候选", () => {
+test("局部生成提示词包含步骤约束、当前正文和旧候选", () => {
   const prompt = buildSectionGenerationPrompt({
     section: "longform-title",
     sourceContent: "原始 X 内容",
@@ -24,7 +24,6 @@ test("局部生成提示词包含步骤约束、当前正文、偏好和旧候�
     currentValue: "当前标题",
     previousCandidates: ["旧标题一", "旧标题二"],
     rejectionReasons: ["缺少吸引力"],
-    preferences: { audience: "professional" },
     promptModules,
   });
 
@@ -34,7 +33,7 @@ test("局部生成提示词包含步骤约束、当前正文、偏好和旧候�
   assert.match(prompt, /当前正文/);
   assert.match(prompt, /旧标题一/);
   assert.match(prompt, /缺少吸引力/);
-  assert.match(prompt, /目标读者：专业人士/);
+  assert.doesNotMatch(prompt, /本次快速设置/);
   assert.match(prompt, /只输出严格JSON/);
 });
 

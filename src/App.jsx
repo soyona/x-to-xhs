@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiSettingsDialog } from "./ApiSettingsDialog";
-import {
-  CONTENT_PREFERENCE_STORAGE_KEY,
-  DEFAULT_CONTENT_PREFERENCES,
-  normalizeContentPreferences,
-} from "./contentPreferences";
 import { History as HistoryIcon, Settings as SettingsIcon } from "lucide-react";
 import { AlertIcon, ArrowIcon } from "./icons";
 import { HistoryDialog } from "./HistoryDialog";
@@ -51,19 +46,6 @@ function getHistoryNotice(result) {
     return "本地服务尚未加载历史功能，请重启 npm run dev；本次稿件尚未写入历史。";
   }
   return "";
-}
-
-function loadContentPreferences() {
-  try {
-    const stored = window.localStorage.getItem(
-      CONTENT_PREFERENCE_STORAGE_KEY,
-    );
-    return stored
-      ? normalizeContentPreferences(JSON.parse(stored))
-      : { ...DEFAULT_CONTENT_PREFERENCES };
-  } catch {
-    return { ...DEFAULT_CONTENT_PREFERENCES };
-  }
 }
 
 function prototypeSectionResult(section) {
@@ -132,9 +114,6 @@ export default function App() {
   const [activeHistory, setActiveHistory] = useState(null);
   const [historyNotice, setHistoryNotice] = useState("");
   const [settingsTab, setSettingsTab] = useState("creation");
-  const [contentPreferences, setContentPreferences] = useState(
-    loadContentPreferences,
-  );
   const [promptState, setPromptState] = useState(null);
   const [health, setHealth] = useState({
     configured: false,
@@ -226,7 +205,6 @@ export default function App() {
           })
         : await postJson("/api/generate", {
             input,
-            preferences: contentPreferences,
             sourceMode,
           });
       setDraft(result.draft);
@@ -258,15 +236,6 @@ export default function App() {
     setHealth(result);
   }
 
-  function saveContentPreferences(preferences) {
-    const normalized = normalizeContentPreferences(preferences);
-    setContentPreferences(normalized);
-    window.localStorage.setItem(
-      CONTENT_PREFERENCE_STORAGE_KEY,
-      JSON.stringify(normalized),
-    );
-  }
-
   function openSettings(tab = "creation") {
     setSettingsTab(tab);
     setSettingsOpen(true);
@@ -277,6 +246,13 @@ export default function App() {
     const result = await postJson("/api/prompts", payload);
     setPromptState(result);
     return result;
+  }
+
+  async function runPromptUtility(payload) {
+    if (prototypeMode) {
+      throw new Error("本地交互稿不支持导入或下载提示词。");
+    }
+    return postJson("/api/prompts", payload);
   }
 
   function restorePreviousDraft() {
@@ -316,7 +292,6 @@ export default function App() {
           currentValue,
           previousCandidates,
           rejectionReasons,
-          preferences: contentPreferences,
         });
     setLatestRun(result);
     return result;
@@ -335,7 +310,6 @@ export default function App() {
   }
 
   function loadHistory({ record, version }) {
-    const restoredPreferences = normalizeContentPreferences(record.preferences);
     const restoredSourceMode =
       normalizeSourceMode(record.source?.mode) ||
       (record.source?.url ? SOURCE_MODES.X_URL : null);
@@ -365,11 +339,6 @@ export default function App() {
       id: record.id,
       version: record.currentVersion,
     });
-    setContentPreferences(restoredPreferences);
-    window.localStorage.setItem(
-      CONTENT_PREFERENCE_STORAGE_KEY,
-      JSON.stringify(restoredPreferences),
-    );
     setDraftHistory([]);
     setHistoryNotice(
       version.version === record.currentVersion
@@ -662,13 +631,12 @@ export default function App() {
       <ApiSettingsDialog
         open={settingsOpen}
         health={health}
-        preferences={contentPreferences}
         promptState={promptState}
         initialTab={settingsTab}
         onClose={() => setSettingsOpen(false)}
         onSave={saveSettings}
-        onSavePreferences={saveContentPreferences}
         onUpdatePrompts={updatePrompts}
+        onPromptUtility={runPromptUtility}
       />
       <HistoryDialog
         open={historyOpen}

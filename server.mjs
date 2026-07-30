@@ -11,10 +11,6 @@ import {
   PROVIDERS,
 } from "./providers.mjs";
 import {
-  buildContentPreferencePrompt,
-  normalizeContentPreferences,
-} from "./src/contentPreferences.js";
-import {
   buildSectionGenerationPrompt,
   parseSectionCandidates,
   validateSectionCandidates,
@@ -365,7 +361,7 @@ export async function resolveSource(input, requestedMode) {
   };
 }
 
-export async function buildPrompt(source, preferences = {}, promptProfile) {
+export async function buildPrompt(source, promptProfile) {
   const profile = promptProfile || (await promptStore.getEffectiveProfile());
   const mode =
     normalizeSourceMode(source.mode) ||
@@ -380,9 +376,6 @@ export async function buildPrompt(source, preferences = {}, promptProfile) {
     mode === SOURCE_MODES.ORIGINAL
       ? "**本次要编辑的自主编写内容如下：**"
       : "**本次要转化的 X 内容如下：**";
-  const preferencePrompt = buildContentPreferencePrompt(
-    normalizeContentPreferences(preferences),
-  );
   const { modules } = profile;
   return [
     modules.global,
@@ -391,7 +384,6 @@ export async function buildPrompt(source, preferences = {}, promptProfile) {
     modules.summary,
     modules.tags,
     modules.output,
-    preferencePrompt,
     "## 结构化来源信息",
     "<source_metadata>",
     sourceContext,
@@ -405,12 +397,11 @@ export async function buildPrompt(source, preferences = {}, promptProfile) {
 
 async function generateDraft(
   input,
-  { preferences = {}, sourceMode = null } = {},
+  { sourceMode = null } = {},
 ) {
   const source = await resolveSource(input, sourceMode);
-  const normalizedPreferences = normalizeContentPreferences(preferences);
   const promptProfile = await promptStore.getEffectiveProfile();
-  const prompt = await buildPrompt(source, preferences, promptProfile);
+  const prompt = await buildPrompt(source, promptProfile);
   const result = await generateWithFallback({
     prompt,
     dispatcher: externalDispatcher,
@@ -419,7 +410,6 @@ async function generateDraft(
     const record = await historyStore.create({
       source,
       draft: result.draft,
-      preferences: normalizedPreferences,
       generation: result,
       promptProfile,
     });
@@ -451,7 +441,6 @@ async function generateSection(payload = {}) {
     currentValue,
     previousCandidates,
     rejectionReasons,
-    preferences,
     sourceMode,
     source: providedSource,
   } = payload;
@@ -486,7 +475,6 @@ async function generateSection(payload = {}) {
     currentValue,
     previousCandidates,
     rejectionReasons,
-    preferences,
     promptModules: promptProfile.modules,
   });
   const result = await generateWithFallback({
@@ -539,6 +527,20 @@ async function handleApi(request, response) {
         await promptStore.saveProfile(payload.profile || {}),
       );
     }
+    if (payload.action === "export") {
+      return sendJson(
+        response,
+        200,
+        await promptStore.exportMarkdown(payload.modules || null),
+      );
+    }
+    if (payload.action === "import") {
+      return sendJson(
+        response,
+        200,
+        await promptStore.importMarkdown(payload.profile || {}),
+      );
+    }
     if (payload.action === "select") {
       return sendJson(
         response,
@@ -586,12 +588,11 @@ async function handleApi(request, response) {
   }
 
   if (request.method === "POST" && apiUrl.pathname === "/api/generate") {
-    const { input, preferences, sourceMode } = await readJson(request);
+    const { input, sourceMode } = await readJson(request);
     return sendJson(
       response,
       200,
       await generateDraft(input, {
-        preferences,
         sourceMode,
       }),
     );

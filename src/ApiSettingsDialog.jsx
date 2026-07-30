@@ -1,10 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import {
-  CONTENT_PREFERENCE_FIELDS,
-  DEFAULT_CONTENT_PREFERENCES,
-  normalizeContentPreferences,
-} from "./contentPreferences";
 
 const emptyProviders = {};
 const PROMPT_MODULES = [
@@ -27,13 +22,12 @@ function selectedPromptProfile(promptState) {
 
 function PromptSettings({
   promptState,
-  legacyInstructions,
-  onMigrateLegacyInstructions,
   saving,
   setSaving,
   message,
   setMessage,
   onUpdatePrompts,
+  onPromptUtility,
 }) {
   const [draftId, setDraftId] = useState("default");
   const [draftName, setDraftName] = useState("系统默认");
@@ -42,6 +36,7 @@ function PromptSettings({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [messageTone, setMessageTone] = useState("info");
   const [saveComplete, setSaveComplete] = useState(false);
+  const importInputRef = useRef(null);
 
   useEffect(() => {
     const profile = selectedPromptProfile(promptState);
@@ -142,27 +137,73 @@ function PromptSettings({
     setMessage("");
   }
 
-  async function migrateLegacyInstructions() {
-    if (!legacyInstructions?.trim()) return;
-    const migratedModules = {
-      ...draftModules,
-      global: `${draftModules.global.trim()}\n\n## 已迁移的补充创作指令\n\n${legacyInstructions.trim()}`,
-    };
+  async function downloadPrompt({ useDefault = false } = {}) {
     setSaving(true);
     setMessage("");
     try {
+      const result = await onPromptUtility({
+        action: "export",
+        modules: useDefault ? null : draftModules,
+      });
+      const blob = new Blob([result.markdown], {
+        type: "text/markdown;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      const safeName = draftName
+        .trim()
+        .replace(/[\\/:*?"<>|]+/gu, "-")
+        .slice(0, 40);
+      anchor.href = url;
+      anchor.download = useDefault
+        ? "Long-form-post-prompt.md"
+        : `Long-form-post-prompt--${safeName || "当前方案"}.md`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setMessageTone("success");
+      setMessage(useDefault ? "默认模板已下载。" : "当前方案已下载。");
+    } catch (error) {
+      setMessageTone("error");
+      setMessage(error.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function importPrompt(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!/\.md$/iu.test(file.name)) {
+      setMessageTone("error");
+      setMessage("请选择 .md 格式的提示词模板。");
+      return;
+    }
+    if (file.size > 200 * 1024) {
+      setMessageTone("error");
+      setMessage("提示词模板不能超过 200 KiB。");
+      return;
+    }
+    setSaving(true);
+    setMessage("");
+    try {
+      const markdown = await file.text();
+      const importedName =
+        file.name
+          .replace(/\.md$/iu, "")
+          .replace(/^Long-form-post-prompt(?:--)?/iu, "")
+          .trim()
+          .slice(0, 40) || "导入的提示词方案";
       await onUpdatePrompts({
-        action: "save",
+        action: "import",
         profile: {
-          id: isDefault || isNew ? undefined : draftId,
-          name: isDefault ? "迁移后的创作方案" : draftName,
-          modules: migratedModules,
+          name: importedName,
+          markdown,
         },
       });
-      onMigrateLegacyInstructions();
-      setDraftModules(migratedModules);
       setMessageTone("success");
-      setMessage("旧版补充指令已迁移到当前方案的全局规则。");
+      setMessage("模板已导入为新方案并启用。");
+      setSaveComplete(false);
     } catch (error) {
       setMessageTone("error");
       setMessage(error.message);
@@ -183,24 +224,6 @@ function PromptSettings({
       }}
     >
       <div className="prompt-settings">
-        {legacyInstructions?.trim() && (
-          <div className="legacy-instructions-note">
-            <div>
-              <strong>检测到旧版补充创作指令</strong>
-              <span>
-                当前仍会继续生效。迁移后将写入全局规则，并从表达偏好中移除。
-              </span>
-            </div>
-            <button
-              className="settings-reset"
-              type="button"
-              onClick={migrateLegacyInstructions}
-              disabled={saving}
-            >
-              迁移到全局规则
-            </button>
-          </div>
-        )}
         <div className="prompt-profile-toolbar">
           <label htmlFor="prompt-profile-select">
             当前方案
@@ -226,6 +249,39 @@ function PromptSettings({
           >
             新建副本
           </button>
+        </div>
+        <div className="prompt-file-actions">
+          <button
+            className="settings-reset"
+            type="button"
+            onClick={() => downloadPrompt({ useDefault: true })}
+            disabled={saving}
+          >
+            下载默认模板
+          </button>
+          <button
+            className="settings-reset"
+            type="button"
+            onClick={() => downloadPrompt()}
+            disabled={saving}
+          >
+            下载当前方案
+          </button>
+          <button
+            className="settings-reset"
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+            disabled={saving}
+          >
+            上传模板
+          </button>
+          <input
+            ref={importInputRef}
+            className="prompt-file-input"
+            type="file"
+            accept=".md,text/markdown,text/plain"
+            onChange={importPrompt}
+          />
         </div>
 
         <label className="prompt-name-field" htmlFor="prompt-profile-name">
@@ -362,35 +418,25 @@ function PromptSettings({
 export function ApiSettingsDialog({
   open,
   health,
-  preferences,
   promptState,
   initialTab = "creation",
   onClose,
   onSave,
-  onSavePreferences,
   onUpdatePrompts,
+  onPromptUtility,
 }) {
   const [providers, setProviders] = useState(emptyProviders);
-  const [preferenceDraft, setPreferenceDraft] = useState(
-    DEFAULT_CONTENT_PREFERENCES,
-  );
   const [activeTab, setActiveTab] = useState(
     initialTab === "providers" ? "providers" : "creation",
   );
-  const [creationMode, setCreationMode] = useState(
-    initialTab === "prompts" ? "advanced" : "quick",
-  );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [preferenceMessage, setPreferenceMessage] = useState("");
   const [expandedProviderId, setExpandedProviderId] = useState(null);
   const [editingKeyProviderId, setEditingKeyProviderId] = useState(null);
 
   useEffect(() => {
     if (!open) return;
     setActiveTab(initialTab === "providers" ? "providers" : "creation");
-    setCreationMode(initialTab === "prompts" ? "advanced" : "quick");
-    setPreferenceDraft(normalizeContentPreferences(preferences));
     setProviders(
       Object.fromEntries(
         health.providers.map((provider) => [
@@ -407,7 +453,6 @@ export function ApiSettingsDialog({
     );
     setSaving(false);
     setMessage("");
-    setPreferenceMessage("");
     setExpandedProviderId(health.providers[0]?.id || null);
     setEditingKeyProviderId(null);
   }, [health.providers, initialTab, open]);
@@ -433,10 +478,6 @@ export function ApiSettingsDialog({
     }));
   }
 
-  function updatePreference(id, value) {
-    setPreferenceDraft((current) => ({ ...current, [id]: value }));
-  }
-
   async function submitProviders(event) {
     event.preventDefault();
     setSaving(true);
@@ -449,22 +490,6 @@ export function ApiSettingsDialog({
       setMessage(error.message);
       setSaving(false);
     }
-  }
-
-  function submitPreferences(event) {
-    event.preventDefault();
-    onSavePreferences(normalizeContentPreferences(preferenceDraft));
-    setPreferenceMessage("表达偏好已保存，将在下次生成或重新生成时生效。");
-  }
-
-  function clearLegacyInstructions() {
-    const next = normalizeContentPreferences({
-      ...preferenceDraft,
-      additionalInstructions: "",
-    });
-    setPreferenceDraft(next);
-    onSavePreferences(next);
-    setPreferenceMessage("");
   }
 
   return (
@@ -522,121 +547,15 @@ export function ApiSettingsDialog({
 
         {activeTab === "creation" ? (
           <div className="creation-settings">
-            <div
-              className="creation-mode-switch"
-              role="tablist"
-              aria-label="创作设置类型"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={creationMode === "quick"}
-                className={creationMode === "quick" ? "active" : ""}
-                onClick={() => setCreationMode("quick")}
-              >
-                <strong>表达偏好</strong>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={creationMode === "advanced"}
-                className={creationMode === "advanced" ? "active" : ""}
-                onClick={() => setCreationMode("advanced")}
-              >
-                <strong>提示词方案</strong>
-              </button>
-            </div>
-
-            {creationMode === "quick" ? (
-              <form className="settings-form" onSubmit={submitPreferences}>
-                <div className="preference-settings">
-                  <div className="preference-grid">
-                    {CONTENT_PREFERENCE_FIELDS.map((field) => (
-                      <label key={field.id} htmlFor={`preference-${field.id}`}>
-                        {field.label}
-                        <select
-                          id={`preference-${field.id}`}
-                          value={preferenceDraft[field.id]}
-                          onChange={(event) =>
-                            updatePreference(field.id, event.target.value)
-                          }
-                        >
-                          {field.options.map(([value, label]) => (
-                            <option value={value} key={value}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ))}
-                  </div>
-
-                  <div className="preference-text-fields">
-                    <label htmlFor="preference-author-persona">
-                      作者表达身份
-                      <input
-                        id="preference-author-persona"
-                        type="text"
-                        maxLength={100}
-                        value={preferenceDraft.authorPersona}
-                        onChange={(event) =>
-                          updatePreference("authorPersona", event.target.value)
-                        }
-                        placeholder="例如：有产品和工程经验的独立开发者"
-                      />
-                      <span>{preferenceDraft.authorPersona.length}/100</span>
-                    </label>
-
-                    <label htmlFor="preference-banned-phrases">
-                      禁用表达
-                      <input
-                        id="preference-banned-phrases"
-                        type="text"
-                        maxLength={200}
-                        value={preferenceDraft.bannedPhrases}
-                        onChange={(event) =>
-                          updatePreference("bannedPhrases", event.target.value)
-                        }
-                        placeholder="用逗号分隔，例如：封神、颠覆、遥遥领先"
-                      />
-                      <span>{preferenceDraft.bannedPhrases.length}/200</span>
-                    </label>
-                  </div>
-                </div>
-
-                {preferenceMessage && (
-                  <p className="settings-message" role="status">
-                    {preferenceMessage}
-                  </p>
-                )}
-
-                <div className="settings-actions preference-actions">
-                  <button
-                    className="settings-reset"
-                    type="button"
-                    onClick={() =>
-                      setPreferenceDraft({ ...DEFAULT_CONTENT_PREFERENCES })
-                    }
-                  >
-                    恢复默认
-                  </button>
-                  <button className="settings-save" type="submit">
-                    保存偏好
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <PromptSettings
-                promptState={promptState}
-                legacyInstructions={preferenceDraft.additionalInstructions}
-                onMigrateLegacyInstructions={clearLegacyInstructions}
-                saving={saving}
-                setSaving={setSaving}
-                message={message}
-                setMessage={setMessage}
-                onUpdatePrompts={onUpdatePrompts}
-              />
-            )}
+            <PromptSettings
+              promptState={promptState}
+              saving={saving}
+              setSaving={setSaving}
+              message={message}
+              setMessage={setMessage}
+              onUpdatePrompts={onUpdatePrompts}
+              onPromptUtility={onPromptUtility}
+            />
           </div>
         ) : (
           <form className="settings-form" onSubmit={submitProviders}>

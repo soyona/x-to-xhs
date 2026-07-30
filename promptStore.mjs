@@ -31,6 +31,8 @@ const DEFAULT_PROFILE_ID = "default";
 const PROFILE_ID_PATTERN = /^[a-z0-9-]{1,80}$/u;
 const MARKER_PATTERN =
   /<!--\s*PROMPT:([A-Z]+):START\s*-->([\s\S]*?)<!--\s*PROMPT:\1:END\s*-->/gu;
+const SOURCE_MARKER_PATTERN =
+  /<!--\s*PROMPT:SOURCE:START\s*-->[\s\S]*?<!--\s*PROMPT:SOURCE:END\s*-->/gu;
 
 function emptyDocument() {
   return {
@@ -81,14 +83,35 @@ function validateDocument(value) {
 
 export function parsePromptModules(markdown = "") {
   const modules = {};
+  const counts = new Map();
   for (const match of markdown.matchAll(MARKER_PATTERN)) {
-    modules[match[1].toLowerCase()] = match[2].trim();
+    const id = match[1].toLowerCase();
+    if (!PROMPT_MODULE_IDS.includes(id)) continue;
+    counts.set(id, (counts.get(id) || 0) + 1);
+    modules[id] = match[2].trim();
+  }
+  const duplicated = PROMPT_MODULE_IDS.filter((id) => counts.get(id) > 1);
+  if (duplicated.length) {
+    throw new Error(`默认提示词模块重复：${duplicated.join("、")}。`);
   }
   const missing = PROMPT_MODULE_IDS.filter((id) => !modules[id]);
   if (missing.length) {
     throw new Error(`默认提示词缺少模块：${missing.join("、")}。`);
   }
   return modules;
+}
+
+function replacePromptModules(markdown, modules) {
+  return EDITABLE_PROMPT_MODULE_IDS.reduce((document, id) => {
+    const marker = new RegExp(
+      `(<!--\\s*PROMPT:${id.toUpperCase()}:START\\s*-->)[\\s\\S]*?(<!--\\s*PROMPT:${id.toUpperCase()}:END\\s*-->)`,
+      "u",
+    );
+    return document.replace(
+      marker,
+      (_match, start, end) => `${start}\n\n${modules[id].trim()}\n\n${end}`,
+    );
+  }, markdown);
 }
 
 function profileSummary(profile, defaultModules) {
@@ -245,6 +268,42 @@ export function createPromptStore({ rootDir, dataDir, now = () => new Date() }) 
     return getState();
   }
 
+  async function exportMarkdown(modules = null) {
+    await writeQueue;
+    const markdown = await readFile(defaultPath, "utf8");
+    if (!modules) {
+      return {
+        name: "Long-form-post-prompt.md",
+        markdown,
+      };
+    }
+    const cleanedModules = cleanEditableModules(modules);
+    return {
+      name: "Long-form-post-prompt.md",
+      markdown: replacePromptModules(markdown, cleanedModules),
+    };
+  }
+
+  async function importMarkdown({ name, markdown }) {
+    if (typeof markdown !== "string" || !markdown.trim()) {
+      throw new Error("请选择有效的 Markdown 提示词文件。");
+    }
+    if ([...markdown.matchAll(SOURCE_MARKER_PATTERN)].length !== 1) {
+      throw new Error("提示词模板必须保留一组完整的 SOURCE 素材占位标记。");
+    }
+    const importedModules = parsePromptModules(markdown);
+    const defaultProfile = await readDefaultProfile();
+    if (importedModules.output !== defaultProfile.protectedModules.output) {
+      throw new Error("固定输出协议已被修改，请使用未改变结构的模板重新导入。");
+    }
+    return saveProfile({
+      name,
+      modules: Object.fromEntries(
+        EDITABLE_PROMPT_MODULE_IDS.map((id) => [id, importedModules[id]]),
+      ),
+    });
+  }
+
   async function selectProfile(id) {
     await enqueueWrite(async () => {
       const document = await readDocument();
@@ -282,6 +341,8 @@ export function createPromptStore({ rootDir, dataDir, now = () => new Date() }) 
     getState,
     getEffectiveProfile,
     saveProfile,
+    exportMarkdown,
+    importMarkdown,
     selectProfile,
     deleteProfile,
   };

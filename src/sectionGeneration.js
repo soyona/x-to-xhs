@@ -1,5 +1,3 @@
-import { buildContentPreferencePrompt, normalizeContentPreferences } from "./contentPreferences.js";
-
 export const SECTION_TYPES = new Set([
   "longform-title",
   "body",
@@ -50,7 +48,6 @@ export function buildSectionGenerationPrompt({
   currentValue,
   previousCandidates,
   rejectionReasons,
-  preferences = {},
   promptModules,
 }) {
   if (!SECTION_TYPES.has(section)) throw new Error("不支持这个局部生成步骤。");
@@ -68,9 +65,6 @@ export function buildSectionGenerationPrompt({
         .filter(Boolean)
         .slice(0, 5)
     : [];
-  const preferencePrompt = buildContentPreferencePrompt(
-    normalizeContentPreferences(preferences),
-  );
   const moduleId = sectionModuleIds[section];
   const globalInstructions = promptModules?.global?.trim();
   const moduleInstructions = promptModules?.[moduleId]?.trim();
@@ -101,8 +95,6 @@ ${taskInstructions[section]}
 只输出严格JSON，不要Markdown代码围栏，不要解释：
 {"candidates":["候选1","候选2","候选3"]}
 ${section === "longform-title" ? "candidates必须恰好包含3项。" : "candidates必须恰好包含1项。"}
-
-${preferencePrompt}
 
 ## 结构化来源信息
 <source_metadata>

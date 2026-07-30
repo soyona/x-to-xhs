@@ -65,7 +65,6 @@ function recordInput(title, source = "原始 X 内容") {
       authorName: "Example Author",
     },
     draft: `# ${title}\n\n正文`,
-    preferences: { audience: "intermediate", tone: "warm" },
     generation: generation(),
   };
 }

@@ -28,8 +28,8 @@ npm run dev
 
 开发脚本以 Node watch 模式运行本地服务；服务端代码及其依赖变化后会自动
 重启，避免页面热更新与 API 版本不一致。
-监听清单必须只包含现存的服务端依赖；当前包含提示词存储、内容偏好、
-局部生成及小红书文本拆分模块，不再监听已删除的 `src/validation.js`。
+监听清单必须只包含现存的服务端依赖；当前包含提示词存储、局部生成及
+小红书文本拆分模块，不再监听已删除的内容偏好和 validation 模块。
 
 Vite 将 `/api` 代理到 8787。
 
@@ -76,7 +76,7 @@ npm start
 | GET | `/api/health` | 返回供应商、模型和是否配置；绝不返回 Key |
 | POST | `/api/settings` | 保存/保留/清除 Key，更新模型 |
 | GET | `/api/prompts` | 返回系统默认、自定义方案和当前选中方案 |
-| POST | `/api/prompts` | 保存、切换或删除自定义提示词方案 |
+| POST | `/api/prompts` | 保存、切换、删除、导入或导出提示词方案 |
 | GET | `/api/history` | 最近更新时间倒序返回历史列表 |
 | GET | `/api/history/:id` | 返回一条历史详情和最近 3 个版本 |
 | DELETE | `/api/history/:id` | 删除一条历史及其全部版本 |
@@ -86,9 +86,11 @@ npm start
 
 请求体上限为 256 KiB。
 
-`/api/generate` 和 `/api/generate-section` 可携带 `preferences`。服务端仅接受
-`src/contentPreferences.js` 声明的枚举值，并限制自由文本长度；偏好不写入
-`.env`，由浏览器本地存储持久化。
+`/api/generate` 和 `/api/generate-section` 只接收生成任务、来源和当前稿件
+所需数据；内容规则只来自服务端当前提示词方案，不再接收独立表达偏好。
+
+`POST /api/prompts` 的 `export` 操作返回完整 Markdown 模板；`import` 操作
+要求六个 Prompt 模块完整且固定 `output` 协议未被修改，然后保存为新的本地方案。
 
 生成接口成功保存历史后返回 `historyId` 和 `historyVersion`。历史保存失败不会
 吞掉已经生成的草稿，而是返回 `historyWarning` 供页面明确提示。

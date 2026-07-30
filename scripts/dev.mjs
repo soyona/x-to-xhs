@@ -12,7 +12,6 @@ const children = [
       "--watch-path=historyStore.mjs",
       "--watch-path=promptStore.mjs",
       "--watch-path=providers.mjs",
-      "--watch-path=src/contentPreferences.js",
       "--watch-path=src/sectionGeneration.js",
       "--watch-path=src/xiaohongshuPublish.js",
       "--watch-path=src/xiaohongshuText.js",

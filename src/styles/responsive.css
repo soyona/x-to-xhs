@@ -382,10 +382,6 @@
     padding: 0 16px 12px;
   }
 
-  .preference-settings {
-    padding: 0 16px 14px;
-  }
-
   .creation-settings {
     padding: 0 16px 14px;
   }
@@ -399,21 +395,12 @@
     flex-direction: column;
   }
 
-  .legacy-instructions-note {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
   .prompt-module-tabs {
     grid-template-columns: repeat(3, 1fr);
   }
 
   .prompt-module-editor textarea {
     min-height: 220px;
-  }
-
-  .preference-grid {
-    grid-template-columns: 1fr;
   }
 
   .settings-provider-summary {

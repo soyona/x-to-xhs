@@ -273,7 +273,6 @@ export function createHistoryStore({
   async function create({
     source,
     draft,
-    preferences,
     generation,
     promptProfile,
   }) {
@@ -310,7 +309,6 @@ export function createHistoryStore({
           excerpt: sourceExcerpt(sourceContent),
         },
         currentVersion: 1,
-        preferences: clone(preferences || {}),
         generation: summary,
         promptProfile: summaryPromptProfile,
         versions: [
