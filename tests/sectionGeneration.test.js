@@ -17,7 +17,7 @@ const promptModules = {
 
 test("局部生成提示词包含步骤约束、当前正文、偏好和旧候选", () => {
   const prompt = buildSectionGenerationPrompt({
-    section: "publish-title",
+    section: "longform-title",
     sourceContent: "原始 X 内容",
     draft: PROTOTYPE_DRAFT_PASSED,
     body: "当前正文",
@@ -28,7 +28,7 @@ test("局部生成提示词包含步骤约束、当前正文、偏好和旧候�
     promptModules,
   });
 
-  assert.match(prompt, /生成恰好3个发布标题候选/);
+  assert.match(prompt, /生成恰好3个长文标题候选/);
   assert.match(prompt, /标题规则来自当前提示词方案/);
   assert.match(prompt, /不得虚构事实/);
   assert.match(prompt, /当前正文/);
@@ -61,7 +61,7 @@ test("正文局部生成提示词使用当前方案的正文模块", () => {
 test("解析标题和标签候选时清理围栏、标题前缀与重复标签", () => {
   const titles = parseSectionCandidates(
     '```json\n{"candidates":["# 标题一","标题：标题二","“标题三”"]}\n```',
-    "publish-title",
+    "longform-title",
   );
   const tags = parseSectionCandidates(
     '{"candidates":["#AI工具 #内容创作 #AI工具 #效率提升 #自媒体 #写作方法 #创作者 #小红书长文 #搜索优化"]}',
@@ -78,18 +78,32 @@ test("解析标题和标签候选时清理围栏、标题前缀与重复标签",
 test("候选只检查技术数量协议，不再执行内容规则判定", () => {
   assert.deepEqual(
     validateSectionCandidates(
-      "publish-title",
-      ["标题一", "标题二", "这是一个明显超过二十个字符限制的发布标题候选内容"],
+      "longform-title",
+      ["标题一", "标题二", "这是一个明显超过二十个字符限制的长文标题候选内容"],
     ),
-    ["标题一", "标题二", "这是一个明显超过二十个字符限制的发布标题候选内容"],
+    ["标题一", "标题二", "这是一个明显超过二十个字符限制的长文标题候选内容"],
   );
   assert.throws(
     () =>
       validateSectionCandidates(
-        "publish-title",
+        "longform-title",
         ["标题一", "标题二"],
       ),
     /需要返回3个/,
+  );
+});
+
+test("已移除的发布标题步骤不能再调用局部生成", () => {
+  assert.throws(
+    () =>
+      buildSectionGenerationPrompt({
+        section: "publish-title",
+        sourceContent: "原始 X 内容",
+        draft: PROTOTYPE_DRAFT_PASSED,
+        body: "当前正文",
+        promptModules,
+      }),
+    /不支持这个局部生成步骤/,
   );
 });
 

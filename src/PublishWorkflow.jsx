@@ -40,7 +40,6 @@ function initialSectionGenerations() {
   return {
     "longform-title": { ...emptySectionGeneration },
     body: { ...emptySectionGeneration },
-    "publish-title": { ...emptySectionGeneration },
     description: { ...emptySectionGeneration },
     tags: { ...emptySectionGeneration },
   };
@@ -57,12 +56,10 @@ function GenerationPanel({
   disabled,
   onSelect,
 }) {
-  const hasMultipleCandidates =
-    section === "longform-title" || section === "publish-title";
+  const hasMultipleCandidates = section === "longform-title";
   const candidateLabel = {
     "longform-title": "长文标题候选",
     body: "正文新版本",
-    "publish-title": "发布标题候选",
     description: "正文描述新版本",
     tags: "标签新版本",
   }[section];
@@ -76,7 +73,7 @@ function GenerationPanel({
         <div>
           <strong>{candidateLabel}</strong>
           {section === "body" && (
-            <small>采用新正文后，步骤 04–06 会标记为需要复核。</small>
+            <small>采用新正文后，步骤 04–05 会标记为需要复核。</small>
           )}
           {section === "tags" && (
             <small>
@@ -381,10 +378,8 @@ export function PublishWorkflow({
   );
   const [copiedStep, setCopiedStep] = useState("");
   const [exportStatus, setExportStatus] = useState("");
-  const [publishTitle, setPublishTitle] = useState(fields.publishTitle);
   const [bodyVersion, setBodyVersion] = useState(1);
   const [sectionBodyVersions, setSectionBodyVersions] = useState({
-    "publish-title": 1,
     description: 1,
     tags: 1,
   });
@@ -404,10 +399,8 @@ export function PublishWorkflow({
     initializedWorkflowRef.current = workflowId;
     automaticRequestTokenRef.current += 1;
     const requestToken = automaticRequestTokenRef.current;
-    setPublishTitle(fields.publishTitle);
     setBodyVersion(1);
     setSectionBodyVersions({
-      "publish-title": 1,
       description: 1,
       tags: 1,
     });
@@ -441,15 +434,7 @@ export function PublishWorkflow({
           },
         }));
         const preferred = result.candidates[0];
-        if (section === "longform-title") {
-          onApplySection(section, preferred);
-        } else {
-          setPublishTitle(preferred);
-          setSectionBodyVersions((current) => ({
-            ...current,
-            "publish-title": 1,
-          }));
-        }
+        onApplySection(section, preferred);
       } catch (generationError) {
         if (automaticRequestTokenRef.current !== requestToken) return;
         setSectionGenerations((current) => ({
@@ -464,7 +449,6 @@ export function PublishWorkflow({
     }
 
     void loadInitialCandidates("longform-title", fields.longformTitle);
-    void loadInitialCandidates("publish-title", fields.publishTitle);
   }, [workflowId]);
 
   async function regenerateSection(section) {
@@ -472,7 +456,6 @@ export function PublishWorkflow({
     const currentValue = {
       "longform-title": fields.longformTitle,
       body: fields.body,
-      "publish-title": publishTitle,
       description: fields.description,
       tags: fields.tags,
     }[section];
@@ -513,14 +496,6 @@ export function PublishWorkflow({
   }
 
   function selectCandidate(section, candidate) {
-    if (section === "publish-title") {
-      setPublishTitle(candidate);
-      setSectionBodyVersions((current) => ({
-        ...current,
-        "publish-title": bodyVersion,
-      }));
-      return;
-    }
     if (section === "body" && candidate === fields.body) return;
     onApplySection(section, candidate);
     if (section === "body") {
@@ -542,8 +517,7 @@ export function PublishWorkflow({
 
   function generationControls(section, currentValue) {
     const generationState = sectionGenerations[section];
-    const hasMultipleCandidates =
-      section === "longform-title" || section === "publish-title";
+    const hasMultipleCandidates = section === "longform-title";
     const regenerateLabel = hasMultipleCandidates
       ? "重新生成3个"
       : {
@@ -703,24 +677,6 @@ export function PublishWorkflow({
 
       <CopyStep
         number="04"
-        title="修改发布标题"
-        hint="发布标题独立生成，选择后粘贴到发布页；硬限制不超过20字。"
-        value={publishTitle}
-        meta={`${countPlatformCharacters(publishTitle)}/20字`}
-        warning={countPlatformCharacters(publishTitle) > 20}
-        copied={copiedStep === "publish-title"}
-        onCopy={() => copyField("publish-title", publishTitle)}
-        copyLabel="复制发布标题"
-        generationControls={generationControls(
-          "publish-title",
-          publishTitle,
-        )}
-        stale={sectionBodyVersions["publish-title"] < bodyVersion}
-        disabled={false}
-      />
-
-      <CopyStep
-        number="05"
         title="输入正文描述"
         hint={
           fields.sources.description === "summary"
@@ -743,7 +699,7 @@ export function PublishWorkflow({
       />
 
       <CopyStep
-        number="06"
+        number="05"
         title="输入标签"
         hint={
           fields.sources.tags === "default-fallback"
@@ -761,7 +717,7 @@ export function PublishWorkflow({
       />
 
       <ActionStep
-        number="07"
+        number="06"
         title="预览并发布"
         description={
           normalizeSourceMode(source?.mode) === SOURCE_MODES.X_CONTENT &&
@@ -771,7 +727,7 @@ export function PublishWorkflow({
             : Object.entries(sectionBodyVersions).some(
             ([, version]) => version < bodyVersion,
           )
-            ? "正文已更新，发布标题、描述或标签仍基于上一版正文；请重新生成或人工确认后发布。"
+            ? "正文已更新，描述或标签仍基于上一版正文；请重新生成或人工确认后发布。"
             : normalizeSourceMode(source?.mode) === SOURCE_MODES.ORIGINAL
               ? "确认内容、封面和标签无误，并使用小红书的 AI 内容声明后发布。"
               : "确认作者、原帖链接、引用和事实无误，并使用小红书的 AI 内容声明后发布。"

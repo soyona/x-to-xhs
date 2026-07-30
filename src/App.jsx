@@ -79,11 +79,6 @@ function prototypeSectionResult(section) {
         "新版本把完整任务进一步拆成",
       ),
     ],
-    "publish-title": [
-      "X内容别再硬翻了🔥",
-      "一套方法重构X长文🚀",
-      "把X观点写成好长文✨",
-    ],
     description: [fields.description],
     tags: [fields.tags],
   }[section];

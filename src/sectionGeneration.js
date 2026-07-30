@@ -3,7 +3,6 @@ import { buildContentPreferencePrompt, normalizeContentPreferences } from "./con
 export const SECTION_TYPES = new Set([
   "longform-title",
   "body",
-  "publish-title",
   "description",
   "tags",
 ]);
@@ -11,7 +10,6 @@ export const SECTION_TYPES = new Set([
 const sectionModuleIds = {
   "longform-title": "title",
   body: "body",
-  "publish-title": "title",
   description: "summary",
   tags: "tags",
 };
@@ -21,8 +19,6 @@ const taskInstructions = {
     "生成恰好3个长文标题候选，并按照痛点场景型、逆向认知型、解决方案型的顺序放入 candidates。",
   body:
     "只生成1个长文正文新版本，不输出长文标题、正文摘要、推荐标签或其他说明。",
-  "publish-title":
-    "生成恰好3个发布标题候选，并按照痛点场景型、逆向认知型、解决方案型的顺序放入 candidates。",
   description:
     "只生成1个当前正文的摘要描述，不输出“正文小结 / 摘要”标题。",
   tags:
@@ -104,11 +100,7 @@ ${taskInstructions[section]}
 ## 输出协议
 只输出严格JSON，不要Markdown代码围栏，不要解释：
 {"candidates":["候选1","候选2","候选3"]}
-${
-  section === "longform-title" || section === "publish-title"
-    ? "candidates必须恰好包含3项。"
-    : "candidates必须恰好包含1项。"
-}
+${section === "longform-title" ? "candidates必须恰好包含3项。" : "candidates必须恰好包含1项。"}
 
 ${preferencePrompt}
 
@@ -154,7 +146,7 @@ function parseJsonObject(raw) {
 function normalizeCandidate(section, value) {
   if (typeof value !== "string") return "";
   let candidate = value.trim();
-  if (section === "longform-title" || section === "publish-title") {
+  if (section === "longform-title") {
     candidate = candidate
       .replace(/^#{1,2}\s+/u, "")
       .replace(/^标题[：:]\s*/u, "")
@@ -190,8 +182,7 @@ export function parseSectionCandidates(raw, section) {
 }
 
 export function validateSectionCandidates(section, candidates) {
-  const requiredCount =
-    section === "longform-title" || section === "publish-title" ? 3 : 1;
+  const requiredCount = section === "longform-title" ? 3 : 1;
   if (!Array.isArray(candidates) || candidates.length !== requiredCount) {
     throw new Error(`模型需要返回${requiredCount}个合格候选。`);
   }

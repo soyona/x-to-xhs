@@ -189,7 +189,6 @@ export function splitXiaohongshuDraft(markdown = "") {
   return {
     longformTitle: title,
     body,
-    publishTitle: title,
     description,
     tags,
     sources: {
@@ -199,7 +198,6 @@ export function splitXiaohongshuDraft(markdown = "") {
     counts: {
       longformTitle: countPlatformCharacters(title),
       body: countPlatformCharacters(body),
-      publishTitle: countPlatformCharacters(title),
       description: countPlatformCharacters(description),
       tags: (tags.match(/#[\p{L}\p{N}_-]+/gu) || []).length,
     },

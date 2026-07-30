@@ -195,7 +195,7 @@ test("demo1 转换后保留标题层级并移除加粗、代码围栏和表格�
 });
 
 test("按小红书写长文流程拆分标题、正文、描述和标签", () => {
-  const source = `# 十八字以内的小红书发布标题
+  const source = `# 十八字以内的小红书长文标题
 
 ---
 
@@ -226,8 +226,7 @@ test("按小红书写长文流程拆分标题、正文、描述和标签", () =>
 
   const result = splitXiaohongshuDraft(source);
 
-  assert.equal(result.longformTitle, "十八字以内的小红书发布标题");
-  assert.equal(result.publishTitle, result.longformTitle);
+  assert.equal(result.longformTitle, "十八字以内的小红书长文标题");
   assert.equal(
     result.body,
     "开头正文。\n\n## 一、核心方法\n\n这里是正文重点。\n\n- 第一条\n1. 第二步",
@@ -235,10 +234,6 @@ test("按小红书写长文流程拆分标题、正文、描述和标签", () =>
   assert.equal(result.description, "这是发布页使用的正文描述。");
   assert.equal(result.tags, "#AI工具 #开发效率");
   assert.equal(result.counts.tags, 2);
-  assert.equal(
-    result.counts.publishTitle,
-    countPlatformCharacters(result.publishTitle),
-  );
   assert.doesNotMatch(result.body, /正文小结|排版风格建议|推荐标签|审稿自查/);
 });
 
@@ -284,7 +279,7 @@ test("识别同一行、加粗、编号和冒号形式的摘要与标签", () =>
   assert.equal(result.sources.tags, "generated");
 });
 
-test("05正文描述保留摘要的空行与连续编号排版", () => {
+test("04正文描述保留摘要的空行与连续编号排版", () => {
   const source = `# 可直接发布的小红书长文标题
 
 正文。
@@ -316,7 +311,7 @@ test("05正文描述保留摘要的空行与连续编号排版", () => {
   );
 });
 
-test("缺少独立摘要和标签时为05与06提供非空兜底内容", () => {
+test("缺少独立摘要和标签时为04与05提供非空兜底内容", () => {
   const source = `# 可直接发布的小红书长文标题
 
 第一段介绍核心问题。

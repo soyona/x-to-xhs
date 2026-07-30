@@ -831,7 +831,7 @@
 .publishing-route-steps {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(7, minmax(66px, 1fr));
+  grid-template-columns: repeat(6, minmax(66px, 1fr));
 }
 
 .publishing-route-steps::before {

@@ -8,7 +8,6 @@ import {
   Heading1,
   LayoutGrid,
   ListTree,
-  Pilcrow,
   Send,
   Sparkles,
   Tags,
@@ -27,7 +26,7 @@ const EMPTY_WORKFLOW_STAGES = [
   },
   {
     title: "分步复制到小红书",
-    description: "按 7 个步骤依次完成",
+    description: "按 6 个步骤依次完成",
     Icon: ClipboardList,
   },
   {
@@ -41,10 +40,9 @@ const EMPTY_PUBLISHING_STEPS = [
   { number: "01", label: "长文标题", Icon: Heading1 },
   { number: "02", label: "长文正文", Icon: AlignLeft },
   { number: "03", label: "一键排版", Icon: LayoutGrid },
-  { number: "04", label: "发布标题", Icon: Pilcrow },
-  { number: "05", label: "正文描述", Icon: ListTree },
-  { number: "06", label: "标签", Icon: Tags },
-  { number: "07", label: "预览并发布", Icon: BadgeCheck },
+  { number: "04", label: "正文描述", Icon: ListTree },
+  { number: "05", label: "标签", Icon: Tags },
+  { number: "06", label: "预览并发布", Icon: BadgeCheck },
 ];
 
 function EmptyWorkflowGuide() {
@@ -52,7 +50,7 @@ function EmptyWorkflowGuide() {
     <div className="empty-state empty-workflow-guide">
       <div className="empty-workflow-heading">
         <h2>从一条 X 推文，到可发布的小红书长文</h2>
-        <p>先粘贴素材，生成后按 7 个步骤完成发布。</p>
+        <p>先粘贴素材，生成后按 6 个步骤完成发布。</p>
       </div>
 
       <div className="workflow-map" aria-label="X 推文转小红书长文完整流程">
@@ -79,7 +77,7 @@ function EmptyWorkflowGuide() {
           ))}
         </ol>
 
-        <div className="publishing-route" aria-label="小红书长文 7 步发布流程">
+        <div className="publishing-route" aria-label="小红书长文 6 步发布流程">
           <span className="publishing-route-branch" aria-hidden="true" />
           <ol className="publishing-route-steps">
             {EMPTY_PUBLISHING_STEPS.map(({ number, label, Icon }) => (
