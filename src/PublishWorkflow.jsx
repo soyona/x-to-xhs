@@ -55,6 +55,7 @@ function GenerationPanel({
   sourceUpdatedAt,
   disabled,
   onSelect,
+  onCopy,
 }) {
   const hasMultipleCandidates = section === "longform-title";
   const candidateLabel = {
@@ -82,6 +83,7 @@ function GenerationPanel({
                 : "基于正文生成 · 未使用实时趋势数据"}
             </small>
           )}
+          {hasMultipleCandidates && <small>双击相应标题即可复制</small>}
         </div>
       </div>
 
@@ -100,6 +102,35 @@ function GenerationPanel({
         >
           {candidates.map((candidate, index) => {
             const selected = candidate === currentValue;
+            if (hasMultipleCandidates) {
+              return (
+                <div
+                  className="section-candidate is-copyable"
+                  role="button"
+                  tabIndex={disabled || isGenerating ? -1 : 0}
+                  key={`${section}-${candidate}`}
+                  aria-label={`双击复制标题：${candidate}`}
+                  aria-disabled={disabled || isGenerating}
+                  title="双击复制此标题"
+                  onDoubleClick={() => {
+                    if (!disabled && !isGenerating) onCopy(candidate);
+                  }}
+                  onKeyDown={(event) => {
+                    if (
+                      !disabled &&
+                      !isGenerating &&
+                      (event.key === "Enter" || event.key === " ")
+                    ) {
+                      event.preventDefault();
+                      onCopy(candidate);
+                    }
+                  }}
+                >
+                  <span className="candidate-index">{index + 1}</span>
+                  <span className="candidate-content">{candidate}</span>
+                </div>
+              );
+            }
             return (
               <button
                 className={`section-candidate ${selected ? "is-selected" : ""}`}
@@ -275,6 +306,7 @@ function CopyStep({
             )}
           </div>
         </div>
+        {generationControls?.preview}
         {hasMarkdownModes && viewMode === "code" ? (
           <textarea
             ref={codeEditorRef}
@@ -297,7 +329,7 @@ function CopyStep({
             tabIndex="0"
             dangerouslySetInnerHTML={{ __html: previewHtml }}
           />
-        ) : (
+        ) : generationControls?.preview ? null : (
           <pre
             id={`publish-step-${number}-preview`}
             aria-label={`${title}内容预览`}
@@ -503,21 +535,29 @@ export function PublishWorkflow({
           tags: "重新生成标签",
         }[section];
     const isGenerating = generationState.status === "generating";
+    const generationPanel = (
+      <GenerationPanel
+        section={section}
+        candidates={generationState.candidates}
+        currentValue={currentValue}
+        status={generationState.status}
+        error={generationState.error}
+        sourceMode={generationState.sourceMode}
+        sourceUpdatedAt={generationState.sourceUpdatedAt}
+        disabled={false}
+        onSelect={(candidate) => selectCandidate(section, candidate)}
+        onCopy={(candidate) => copyField("longform-title", candidate)}
+      />
+    );
+    const titlePreview =
+      section === "longform-title" &&
+      (generationState.candidates.length > 0 || generationState.error)
+        ? generationPanel
+        : null;
 
     return {
-      panel: (
-        <GenerationPanel
-          section={section}
-          candidates={generationState.candidates}
-          currentValue={currentValue}
-          status={generationState.status}
-          error={generationState.error}
-          sourceMode={generationState.sourceMode}
-          sourceUpdatedAt={generationState.sourceUpdatedAt}
-          disabled={false}
-          onSelect={(candidate) => selectCandidate(section, candidate)}
-        />
-      ),
+      panel: section === "longform-title" ? null : generationPanel,
+      preview: titlePreview,
       action: (
         <button
           className="section-copy-button section-regenerate-button"
