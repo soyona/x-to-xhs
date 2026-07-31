@@ -373,6 +373,7 @@ export function PublishWorkflow({
   historyCount,
   onRestore,
   workflowId,
+  generateInitialTitleCandidates,
   onGenerateSection,
   onApplySection,
 }) {
@@ -457,6 +458,19 @@ export function PublishWorkflow({
       }));
     }
   }
+
+  const initialTitleGenerationWorkflowRef = useRef(null);
+
+  useEffect(() => {
+    if (
+      !generateInitialTitleCandidates ||
+      initialTitleGenerationWorkflowRef.current === workflowId
+    ) {
+      return;
+    }
+    initialTitleGenerationWorkflowRef.current = workflowId;
+    void regenerateSection("longform-title");
+  }, [generateInitialTitleCandidates, workflowId]);
 
   function selectCandidate(section, candidate) {
     if (section === "body" && candidate === fields.body) return;

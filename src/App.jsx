@@ -109,6 +109,8 @@ export default function App() {
   );
   const [draftHistory, setDraftHistory] = useState([]);
   const [workflowId, setWorkflowId] = useState(prototypeMode ? 1 : 0);
+  const [generateInitialTitleCandidates, setGenerateInitialTitleCandidates] =
+    useState(prototypeMode);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [activeHistory, setActiveHistory] = useState(null);
@@ -188,6 +190,7 @@ export default function App() {
     setLatestRun(null);
     setDraftHistory([]);
     setHistoryNotice("");
+    setGenerateInitialTitleCandidates(false);
     try {
       const result = prototypeMode
         ? await new Promise((resolve) => {
@@ -217,6 +220,7 @@ export default function App() {
           : null,
       );
       setHistoryNotice(getHistoryNotice(result));
+      setGenerateInitialTitleCandidates(true);
       setWorkflowId((current) => current + 1);
       setStatus("done");
     } catch (generationError) {
@@ -264,6 +268,7 @@ export default function App() {
     setDraftHistory((history) => history.slice(0, -1));
     setError("");
     setStatus("done");
+    setGenerateInitialTitleCandidates(false);
     setWorkflowId((current) => current + 1);
   }
 
@@ -347,6 +352,7 @@ export default function App() {
     );
     setError("");
     setStatus("done");
+    setGenerateInitialTitleCandidates(false);
     setWorkflowId((current) => current + 1);
     setHistoryOpen(false);
   }
@@ -610,6 +616,9 @@ export default function App() {
                   historyCount={draftHistory.length}
                   onRestore={restorePreviousDraft}
                   workflowId={workflowId}
+                  generateInitialTitleCandidates={
+                    generateInitialTitleCandidates
+                  }
                   onGenerateSection={generateWorkflowSection}
                   onApplySection={applyWorkflowSection}
                 />
