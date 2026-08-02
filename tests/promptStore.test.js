@@ -45,6 +45,53 @@ test("默认提示词必须包含完整模块", () => {
   );
 });
 
+test("默认提示词约束第三方素材不得补写未展开的技术内容", async () => {
+  const markdown = await readFile(
+    join(process.cwd(), "Long-form-post-prompt.md"),
+    "utf8",
+  );
+  const parsed = parsePromptModules(markdown);
+
+  assert.match(parsed.global, /每一项事实性主张都必须能在输入素材中找到直接依据/);
+  assert.match(parsed.global, /只能将其表述为内容预告/);
+  assert.doesNotMatch(parsed.global, /必须增加背景、核验、适用场景、案例/);
+  assert.doesNotMatch(parsed.global, /已核验上下文/);
+  assert.match(parsed.body, /不得使用模型自身知识补写定义、设计模式、工作流程/);
+  assert.doesNotMatch(parsed.body, /必须基于通用技术常识补足/);
+  assert.doesNotMatch(parsed.body, /已核验上下文/);
+});
+
+test("默认提示词为局部正文和有限素材提供明确降级规则", async () => {
+  const markdown = await readFile(
+    join(process.cwd(), "Long-form-post-prompt.md"),
+    "utf8",
+  );
+  const parsed = parsePromptModules(markdown);
+
+  assert.match(parsed.title, /不得为了凑类型虚构痛点、反差或解决方案/);
+  assert.match(parsed.body, /局部正文生成不得输出文章大标题/);
+  assert.match(parsed.body, /素材有限时省略/);
+  assert.match(parsed.summary, /信息有限时允许自然缩短/);
+  assert.match(parsed.tags, /素材信息有限时输出 4–8 个/);
+});
+
+test("默认提示词使用条件式专业角色并避免输出模板占位符", async () => {
+  const markdown = await readFile(
+    join(process.cwd(), "Long-form-post-prompt.md"),
+    "utf8",
+  );
+  const parsed = parsePromptModules(markdown);
+
+  assert.match(parsed.global, /其他领域只使用素材明确支持的知识与表达/);
+  assert.match(parsed.global, /“本文分析”只允许归纳、比较、结构化解释/);
+  assert.match(parsed.title, /目标长度为 16–20 个可见字符/);
+  assert.match(parsed.summary, /条件式行动建议（可选）/);
+  assert.match(parsed.output, /## 正文小结 \/ 摘要/);
+  assert.match(parsed.output, /## 推荐标签/);
+  assert.doesNotMatch(parsed.output, /\[[^\]]+\]|# \[|三段式摘要内容/);
+  assert.doesNotMatch(parsed.output, /^## 0X\b/mu);
+});
+
 test("自定义方案可覆盖全局与四个内容模块并继承固定输出协议", async (t) => {
   const rootDir = await mkdtemp(join(tmpdir(), "x-to-xhs-prompts-root-"));
   const dataDir = await mkdtemp(join(tmpdir(), "x-to-xhs-prompts-data-"));
