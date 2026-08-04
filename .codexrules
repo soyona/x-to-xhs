@@ -88,7 +88,7 @@
 
 2. **读取阻断**：
    - 除非当前需求直接涉及对应规范或用户明确指明路径，否则**严禁读取**以下大文件：
-     - `prompts/longform/default.md`
+     - `Long-form-post-prompt.md`
      - `design-*.md`
 
 ## 记忆范围说明
@@ -132,40 +132,23 @@
 这是一个本地运行的 X-to-Xiaohongshu 转换器：
 
 - 输入：完整 X 帖子文本，或一条 `x.com` / `twitter.com` 帖子 URL。
-- 输出：小红书平台「写长文」笔记或「图文」笔记。
-- 不做：视频、播客或自动发布。
+- 输出：小红书平台「写长文」笔记。
+- 不做：视频、普通图文笔记、播客或自动发布。
 - Markdown 只用于模型输出和内部拆分；复制到小红书时输出清理后的纯文本。
 
 ## 不可破坏的产品约束
 
 - 默认使用中文界面和中文回复。
-- 页面只有两个核心工作区：`01 素材创作`、`02 小红书笔记`；`02` 根据
-  当前模式展示长文或图文流程，不增加第三个核心工作区。
+- 页面只有两个核心工作区：`01 粘贴 X 内容`、`02 小红书长文`。
 - 两个工作区保持同一可用高度；整页禁止上下或横向滚动，内容只能在各面板内部滚动。
-- 长文与图文共用标题、正文描述和标签能力；这些部分都支持复制和主动
-  重新生成，并保持一致的候选选择与反馈方式。
-- 长文模式下，`02` 不能提供“一次复制全文”作为主流程，必须按小红书
-  「写长文」的 6 步流程分段处理：
+- `02` 不能提供“一次复制全文”作为主流程，必须按小红书「写长文」的 6 步流程分段处理：
   1. 长文标题
   2. 长文正文
   3. 一键排版
   4. 正文描述
   5. 标签
   6. 预览并发布
-- 图文模式下，生成结果由标题、图片组、正文描述和标签组成；图片组对应
-  长文模式的正文，支持整体重新生成、逐页预览、单张下载和批量下载。
-- 图文主题风格等同于长文在小红书“一键排版”时选择的主题，但由用户在
-  本产品内自定义。每个主题使用固定结构的 Markdown 图片提示词模板，
-  用户既可直接编辑 Markdown 文件，也可通过页面配置入口修改各模块内容；
-  页面不得改变、增删或重排模板结构。
-- 图片提示词模板支持增、删、改和选择；模板可以分别定义封面、内容页、
-  排版风格、配色、装饰元素、统计信息和页码规则，并保存为“商务简约”等
-  独立主题风格。
-- 全局、标题、正文或图片、正文摘要和标签规则只存在于当前提示词方案，
-  不得在代码中重复写死；固定输出协议和图片文件技术限制可由系统保护。
-- 图文图片最多 18 张，单张最大 32MB；导出格式只能是 PNG、JPG、JPEG
-  或 WebP，不得输出 GIF 或 Live Photo。默认采用 3:4、且不低于
-  720×960 的画布，并允许在官方推荐的 3:4 至 2:1 比例内配置。
+- 全局、标题、正文、正文摘要和标签规则只存在于当前提示词方案，不得在代码中重复写死。
 - 页面不执行内容通过/失败判定；模型结果不符合预期时由用户主动重新生成。
 - JSON、非空结果和候选数量等技术协议必须保留，但不得扩展为内容 validation。
 - 供应商降级顺序固定：Gemini → Groq Qwen → 智谱 GLM → 硅基流动 Qwen →
@@ -184,7 +167,7 @@
 
 | 主题 | 权威来源 | 修改时必须同步 |
 |---|---|---|
-| 默认提示词与内容规范 | `prompts/longform/default.md`、`prompts/image-note/default.md` | `promptStore.mjs`、提示词测试；长期契约变化时同步 `memory-bank/activeContext.md` 和 `memory-bank/progress.md` |
+| 默认提示词与内容规范 | `Long-form-post-prompt.md` | `promptStore.mjs`、提示词测试；长期契约变化时同步 `memory-bank/activeContext.md` 和 `memory-bank/progress.md` |
 | 本地提示词方案 | `promptStore.mjs` | `server.mjs`、`src/ApiSettingsDialog.jsx`、测试；架构变化时同步 `memory-bank/techContext.md` |
 | 供应商顺序、候选模型与降级策略 | `providers.mjs` | `src/ApiSettingsDialog.jsx`、README、测试 |
 | 发布分段流程 | `src/PublishWorkflow.jsx`、`src/xiaohongshuPublish.js` | 对应测试；产品契约变化时同步 `memory-bank/productContext.md` |
@@ -200,8 +183,6 @@
 | `src/HistoryDialog.jsx` | 历史列表、版本详情、载入和删除弹窗 |
 | `src/contentPreferences.js` | 快速设置字段、默认值、白名单清洗与 Prompt 注入 |
 | `src/PublishWorkflow.jsx` | 小红书 6 步发布、分段复制与主动重新生成 |
-| `src/ImageNoteWorkflow.jsx` | 图文标题、图片组、主题、描述、标签与下载流程 |
-| `src/ImageCardRenderer.jsx` | 图文预览与导出共用的确定性卡片渲染器 |
 | `promptStore.mjs` | 默认提示词解析、本地方案存储和模块组合 |
 | `src/xiaohongshuPublish.js` | 把 Markdown 拆成标题、正文、描述、标签 |
 | `src/xiaohongshuText.js` | 清理 Markdown 为可粘贴纯文本 |
@@ -213,7 +194,7 @@
 
 ## 提示词任务路由
 
-- 提示词内容规则通过页面方案或对应的 `prompts/*/default.md` 调整；只有当前需求
-  直接涉及提示词规范时才读取对应类型文件。
+- 提示词内容规则通过页面方案或 `Long-form-post-prompt.md` 调整；只有当前需求
+  直接涉及提示词规范时才读取该文件。
 - 修改提示词模块边界、输入注入或 JSON 协议前，按需读取
   `memory-bank/activeContext.md`。

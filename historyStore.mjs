@@ -158,7 +158,6 @@ function listItem(record) {
     currentVersion: record.currentVersion,
     generation: record.generation,
     promptProfile: record.promptProfile || null,
-    noteType: record.noteType || "longform",
   };
 }
 
@@ -276,8 +275,6 @@ export function createHistoryStore({
     draft,
     generation,
     promptProfile,
-    noteType = "longform",
-    imageNote = null,
   }) {
     return enqueueWrite(async () => {
       const document = await readDocument();
@@ -288,8 +285,7 @@ export function createHistoryStore({
       }
 
       const timestamp = now().toISOString();
-      if (!new Set(["longform", "image-note"]).has(noteType)) throw new Error("历史笔记类型无效。");
-      const cleanDraft = cleanText(draft, noteType === "image-note" ? "图文笔记" : "长文草稿", 100_000);
+      const cleanDraft = cleanText(draft, "长文草稿", 100_000);
       const sourceContent = cleanText(
         source?.content,
         "原始 X 内容",
@@ -302,8 +298,7 @@ export function createHistoryStore({
         id,
         createdAt: timestamp,
         updatedAt: timestamp,
-        noteType,
-        title: noteType === "image-note" ? cleanText(imageNote?.title, "图文标题", 500) : titleFromDraft(cleanDraft),
+        title: titleFromDraft(cleanDraft),
         source: {
           type: source?.sourceUrl ? "url" : "text",
           mode: cleanOptionalText(source?.mode, 20),
@@ -316,20 +311,12 @@ export function createHistoryStore({
         currentVersion: 1,
         generation: summary,
         promptProfile: summaryPromptProfile,
-        promptSnapshot: {
-          type: noteType,
-          ...summaryPromptProfile,
-          modules: promptProfile?.modules ? clone(promptProfile.modules) : {},
-        },
-        ...(noteType === "image-note" ? { imageNote: clone(imageNote) } : {}),
         versions: [
           {
             version: 1,
             type: "generate",
             createdAt: timestamp,
             draft: cleanDraft,
-            noteType,
-            ...(noteType === "image-note" ? { imageNote: clone(imageNote) } : {}),
             promptProfile: summaryPromptProfile,
             ...summary,
           },

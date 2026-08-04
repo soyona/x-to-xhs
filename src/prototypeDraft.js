@@ -1,5 +1,5 @@
 export const PROTOTYPE_INPUT =
-  "这是一条用于体验提示词配置、分部分重新生成和复制素材的本地示例内容，不会发送给模型。";
+  "这是一条用于体验提示词配置、分部分重新生成和发布流程的本地示例内容，不会发送给模型。";
 
 const body = `很多人把 X 上看到的观点直接翻译后发布，结果内容既生硬，也很难通过小红书用户的阅读检验。这份示例稿把任务拆成内容理解、结构重组和发布检查三个阶段，方便你体验完整工作流。
 
@@ -45,15 +45,3 @@ ${body}
 ## 推荐标签
 
 #小红书长文 #内容创作 #AI写作 #创作者工具 #效率提升 #自媒体 #干货长文 #深度好文`;
-
-export const PROTOTYPE_IMAGE_NOTE = {
-  schemaVersion: 1, noteType: "image-note", title: "💡X内容重构的三个关键步骤",
-  pages: [
-    { id: "page-01", index: 1, kind: "cover", heading: "💡X内容重构的三个关键步骤", subheading: "从直接翻译到可信表达", body: [], highlight: null },
-    { id: "page-02", index: 2, kind: "content", heading: "先识别值得保留的信息", subheading: "", body: ["区分事实、判断与经验", "不添加无法验证的案例"], highlight: "事实边界优先" },
-    { id: "page-03", index: 3, kind: "content", heading: "再重组内容结构", subheading: "", body: ["标记读者真正关心的问题", "用新的顺序组织素材"], highlight: null },
-  ],
-  description: "把 X 内容转成小红书图文，不是逐句翻译，而是保留事实、重建逻辑，并让每一页只表达一个清晰信息。",
-  tags: ["#内容创作", "#AI写作", "#小红书图文"],
-  themeTokens: { canvas: { width: 1080, height: 1440 }, colors: { background: "#FFFFFF", text: "#15181D", accent: "#EF4B43" }, layout: "editorial", showWordCount: true, showReadingTime: true, showPageNumber: true },
-};

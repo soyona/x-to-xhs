@@ -80,7 +80,7 @@
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(320px, 0.92fr) minmax(600px, 1.88fr);
+  grid-template-columns: minmax(280px, 0.72fr) minmax(560px, 2.1fr);
   gap: 14px;
   min-height: 0;
   overflow: hidden;
@@ -109,25 +109,6 @@
 
 .source-content {
   overflow: hidden;
-}
-
-.source-intro {
-  display: grid;
-  flex: 0 0 auto;
-  gap: 3px;
-  margin-bottom: 14px;
-}
-
-.source-intro strong {
-  color: var(--ink);
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.source-intro span {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.45;
 }
 
 .step-number {
@@ -236,41 +217,9 @@ textarea:focus {
   padding: 0 8px;
   color: #555c65;
   background: transparent;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
-}
-
-.source-raw-material {
-  display: flex;
-  min-height: 0;
-  flex: 1 1 auto;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-  background: #fbfcfd;
-}
-
-.source-raw-material-header {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: baseline;
-  gap: 7px;
-  margin-bottom: 9px;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.source-raw-material-header strong {
-  color: var(--ink);
-  font-size: 13px;
-}
-
-.source-field-label {
-  color: var(--soft-muted);
-  font-weight: 700;
 }
 
 .source-mode-picker button.active {
@@ -285,7 +234,7 @@ textarea:focus {
   outline-offset: 1px;
 }
 
-.source-input-meta {
+.source-mode-status {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
@@ -297,7 +246,7 @@ textarea:focus {
   line-height: 1.45;
 }
 
-.source-input-meta.warning {
+.source-mode-status.warning {
   color: #8b6320;
 }
 
@@ -336,15 +285,6 @@ textarea:focus {
   transition:
     background 160ms ease,
     transform 160ms ease;
-}
-
-.source-action-hint {
-  flex: 0 0 auto;
-  margin: 8px 0 0;
-  color: var(--soft-muted);
-  font-size: 11px;
-  line-height: 1.4;
-  text-align: center;
 }
 
 .generate-button:hover:not(:disabled) {
@@ -490,8 +430,4 @@ textarea:focus {
     linear-gradient(rgba(99, 77, 40, 0.018) 1px, transparent 1px),
     linear-gradient(90deg, rgba(99, 77, 40, 0.012) 1px, transparent 1px);
   background-size: 22px 22px;
-}
-
-.document-scroll.is-publish-workflow {
-  overflow: hidden;
 }

@@ -1,99 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Box,
-  ChevronDown,
-  FileText,
-  Images,
-  PenLine,
-} from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 const emptyProviders = {};
-const LONGFORM_PROMPT_MODULES = [
+const PROMPT_MODULES = [
   ["global", "全局规则"],
   ["title", "标题"],
   ["body", "正文"],
   ["summary", "正文摘要"],
   ["tags", "标签"],
 ];
-const IMAGE_NOTE_PROMPT_MODULES = [
-  ["global", "全局规则"],
-  ["title", "标题"],
-  ["images", "图片"],
-  ["summary", "正文摘要"],
-  ["tags", "标签"],
-];
-
-function renderInlineMarkdown(value) {
-  return value.split(/(`[^`]+`|\*\*[^*]+\*\*|==[^=]+==|\*[^*]+\*)/gu).map((part, index) => {
-    if (/^`[^`]+`$/u.test(part)) return <code key={index}>{part.slice(1, -1)}</code>;
-    if (/^\*\*[^*]+\*\*$/u.test(part)) return <strong key={index}>{part.slice(2, -2)}</strong>;
-    if (/^==[^=]+==$/u.test(part)) return <mark key={index}>{part.slice(2, -2)}</mark>;
-    if (/^\*[^*]+\*$/u.test(part)) return <em key={index}>{part.slice(1, -1)}</em>;
-    return part;
-  });
-}
-
-function MarkdownPreview({ value }) {
-  const lines = value.split("\n");
-  return (
-    <div className="prompt-markdown-preview" role="region" aria-label="Markdown 预览">
-      {lines.map((line, index) => {
-        const heading = /^(#{1,3})\s+(.+)$/u.exec(line);
-        if (heading) {
-          const Heading = `h${heading[1].length}`;
-          return <Heading key={index}>{renderInlineMarkdown(heading[2])}</Heading>;
-        }
-        if (/^>\s?/u.test(line)) return <blockquote key={index}>{renderInlineMarkdown(line.replace(/^>\s?/u, ""))}</blockquote>;
-        if (/^[-*]\s+/u.test(line)) return <ul key={index}><li>{renderInlineMarkdown(line.replace(/^[-*]\s+/u, ""))}</li></ul>;
-        if (/^\d+\.\s+/u.test(line)) return <ol key={index}><li>{renderInlineMarkdown(line.replace(/^\d+\.\s+/u, ""))}</li></ol>;
-        if (!line.trim()) return <div className="prompt-preview-spacer" key={index} />;
-        return <p key={index}>{renderInlineMarkdown(line)}</p>;
-      })}
-    </div>
-  );
-}
-
-function MarkdownPromptEditor({ id, value, onChange, disabled }) {
-  const [mode, setMode] = useState("edit");
-  const textareaRef = useRef(null);
-
-  function insertMarkdown(before, after = before, placeholder = "文本") {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = value.slice(start, end) || placeholder;
-    const nextValue = `${value.slice(0, start)}${before}${selected}${after}${value.slice(end)}`;
-    onChange(nextValue);
-    window.requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + before.length, start + before.length + selected.length);
-    });
-  }
-
-  return (
-    <div className="prompt-markdown-editor">
-      <div className="prompt-markdown-toolbar" role="toolbar" aria-label="Markdown 格式工具">
-        <div className="prompt-editor-modes">
-          <button type="button" className={mode === "edit" ? "active" : ""} onClick={() => setMode("edit")}>编辑</button>
-          <button type="button" className={mode === "preview" ? "active" : ""} onClick={() => setMode("preview")}>预览</button>
-        </div>
-        {mode === "edit" && (
-          <div className="prompt-format-actions">
-            <button type="button" onClick={() => insertMarkdown("## ", "", "标题")} disabled={disabled}>标题</button>
-            <button type="button" onClick={() => insertMarkdown("**", "**")} disabled={disabled}>加粗</button>
-            <button type="button" onClick={() => insertMarkdown("- ", "", "列表项")} disabled={disabled}>列表</button>
-            <button type="button" onClick={() => insertMarkdown("> ", "", "引用")} disabled={disabled}>引用</button>
-            <button type="button" onClick={() => insertMarkdown("`", "`")} disabled={disabled}>代码</button>
-          </div>
-        )}
-      </div>
-      {mode === "edit" ? (
-        <textarea ref={textareaRef} id={id} value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} spellCheck="false" />
-      ) : <MarkdownPreview value={value} />}
-    </div>
-  );
-}
 
 function selectedPromptProfile(promptState) {
   if (!promptState) return null;
@@ -114,7 +29,6 @@ function PromptSettings({
   onUpdatePrompts,
   onPromptUtility,
 }) {
-  const promptModules = promptState?.type === "image-note" ? IMAGE_NOTE_PROMPT_MODULES : LONGFORM_PROMPT_MODULES;
   const [draftId, setDraftId] = useState("default");
   const [draftName, setDraftName] = useState("系统默认");
   const [draftModules, setDraftModules] = useState({});
@@ -131,7 +45,6 @@ function PromptSettings({
     setDraftName(profile.name);
     setDraftModules({ ...profile.modules });
     setConfirmingDelete(false);
-    setActiveModule("title");
   }, [promptState]);
 
   useEffect(() => {
@@ -243,8 +156,8 @@ function PromptSettings({
         .slice(0, 40);
       anchor.href = url;
       anchor.download = useDefault
-        ? `${promptState?.type === "image-note" ? "xhs-image-note-prompt" : "xhs-longform-prompt"}--系统默认.md`
-        : `${promptState?.type === "image-note" ? "xhs-image-note-prompt" : "xhs-longform-prompt"}--${safeName || "当前方案"}.md`;
+        ? "Long-form-post-prompt.md"
+        : `Long-form-post-prompt--${safeName || "当前方案"}.md`;
       anchor.click();
       URL.revokeObjectURL(url);
       setMessageTone("success");
@@ -278,7 +191,7 @@ function PromptSettings({
       const importedName =
         file.name
           .replace(/\.md$/iu, "")
-          .replace(/^xhs-(?:longform|image-note)-prompt(?:--)?/iu, "")
+          .replace(/^Long-form-post-prompt(?:--)?/iu, "")
           .trim()
           .slice(0, 40) || "导入的提示词方案";
       await onUpdatePrompts({
@@ -387,41 +300,39 @@ function PromptSettings({
           />
         </label>
 
-        <div className="prompt-editor-layout">
-          <div className="prompt-module-tabs" role="tablist" aria-label="提示词模块">
-            <span>模块</span>
-            {promptModules.map(([id, label]) => (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeModule === id}
-                className={activeModule === id ? "active" : ""}
-                onClick={() => setActiveModule(id)}
-                key={id}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <div className="prompt-module-editor">
-            <label htmlFor="prompt-module-editor">{promptModules.find(([id]) => id === activeModule)?.[1]}提示词</label>
-            <MarkdownPromptEditor
-              id="prompt-module-editor"
-              value={draftModules[activeModule] || ""}
-              onChange={(value) => {
-                setDraftModules((current) => ({
-                  ...current,
-                  [activeModule]: value,
-                }));
-                setSaveComplete(false);
-                setMessage("");
-              }}
-              disabled={saving}
-            />
-            <span>{(draftModules[activeModule] || "").length.toLocaleString()} 字符</span>
-          </div>
+        <div className="prompt-module-tabs" role="tablist" aria-label="提示词模块">
+          {PROMPT_MODULES.map(([id, label]) => (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeModule === id}
+              className={activeModule === id ? "active" : ""}
+              onClick={() => setActiveModule(id)}
+              key={id}
+            >
+              {label}
+            </button>
+          ))}
         </div>
+
+        <label className="prompt-module-editor" htmlFor="prompt-module-editor">
+          {PROMPT_MODULES.find(([id]) => id === activeModule)?.[1]}提示词
+          <textarea
+            id="prompt-module-editor"
+            value={draftModules[activeModule] || ""}
+            onChange={(event) => {
+              setDraftModules((current) => ({
+                ...current,
+                [activeModule]: event.target.value,
+              }));
+              setSaveComplete(false);
+              setMessage("");
+            }}
+            disabled={saving}
+            spellCheck="false"
+          />
+          <span>{(draftModules[activeModule] || "").length.toLocaleString()} 字符</span>
+        </label>
 
       </div>
 
@@ -508,11 +419,9 @@ export function ApiSettingsDialog({
   open,
   health,
   promptState,
-  initialPromptType = "longform",
   initialTab = "creation",
   onClose,
   onSave,
-  onLoadPrompts,
   onUpdatePrompts,
   onPromptUtility,
 }) {
@@ -524,9 +433,6 @@ export function ApiSettingsDialog({
   const [message, setMessage] = useState("");
   const [expandedProviderId, setExpandedProviderId] = useState(null);
   const [editingKeyProviderId, setEditingKeyProviderId] = useState(null);
-  const [managedPromptType, setManagedPromptType] = useState(initialPromptType);
-  const [promptStates, setPromptStates] = useState({});
-  const [promptLoading, setPromptLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -547,20 +453,9 @@ export function ApiSettingsDialog({
     );
     setSaving(false);
     setMessage("");
-    setManagedPromptType(promptState?.type || initialPromptType);
-    setPromptStates(promptState ? { [promptState.type]: promptState } : {});
-    setPromptLoading(false);
     setExpandedProviderId(health.providers[0]?.id || null);
     setEditingKeyProviderId(null);
-  }, [health.providers, initialPromptType, initialTab, open]);
-
-  useEffect(() => {
-    if (!open || !promptState) return;
-    setPromptStates((current) => ({
-      ...current,
-      [promptState.type]: promptState,
-    }));
-  }, [open, promptState]);
+  }, [health.providers, initialTab, open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -597,41 +492,6 @@ export function ApiSettingsDialog({
     }
   }
 
-  async function selectPromptType(nextType) {
-    if (saving || nextType === managedPromptType) return;
-    setManagedPromptType(nextType);
-    setMessage("");
-    if (promptStates[nextType]) return;
-    setPromptLoading(true);
-    try {
-      const result = await onLoadPrompts(nextType);
-      setPromptStates((current) => ({ ...current, [nextType]: result }));
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setPromptLoading(false);
-    }
-  }
-
-  async function updateManagedPrompts(payload) {
-    const result = await onUpdatePrompts(managedPromptType, payload);
-    setPromptStates((current) => ({
-      ...current,
-      [managedPromptType]: result,
-    }));
-    return result;
-  }
-
-  function runManagedPromptUtility(payload) {
-    return onPromptUtility(managedPromptType, payload);
-  }
-
-  const managedPromptState = promptStates[managedPromptType] || null;
-  const longformProfile = selectedPromptProfile(promptStates.longform);
-  const imageNoteProfile = selectedPromptProfile(promptStates["image-note"]);
-  const promptTypeLabel =
-    managedPromptType === "image-note" ? "图文提示词" : "长文提示词";
-
   return (
     <div className="settings-backdrop" role="presentation">
       <section
@@ -656,85 +516,48 @@ export function ApiSettingsDialog({
           </button>
         </div>
 
-        <div className="settings-layout">
-          <nav className="settings-sidebar" aria-label="设置分类">
-            <button
-              type="button"
-              className={`settings-nav-item settings-nav-parent ${activeTab === "creation" ? "active" : ""}`}
-              onClick={() => {
-                setActiveTab("creation");
-                setMessage("");
-              }}
-              disabled={saving}
-            >
-              <PenLine aria-hidden="true" />
-              <span>创作设置</span>
-            </button>
-            <div className="settings-prompt-nav" aria-label="提示词类型">
-              <button
-                type="button"
-                className={activeTab === "creation" && managedPromptType === "longform" ? "active" : ""}
-                aria-pressed={managedPromptType === "longform"}
-                onClick={() => {
-                  setActiveTab("creation");
-                  selectPromptType("longform");
-                }}
-                disabled={saving}
-              >
-                <FileText aria-hidden="true" />
-                <span><strong>长文提示词</strong><small>{longformProfile?.name || "点击管理"}</small></span>
-              </button>
-              <button
-                type="button"
-                className={activeTab === "creation" && managedPromptType === "image-note" ? "active" : ""}
-                aria-pressed={managedPromptType === "image-note"}
-                onClick={() => {
-                  setActiveTab("creation");
-                  selectPromptType("image-note");
-                }}
-                disabled={saving}
-              >
-                <Images aria-hidden="true" />
-                <span><strong>图文提示词</strong><small>{imageNoteProfile?.name || "点击管理"}</small></span>
-              </button>
-            </div>
-            <button
-              type="button"
-              className={`settings-nav-item ${activeTab === "providers" ? "active" : ""}`}
-              onClick={() => {
-                setActiveTab("providers");
-                setMessage("");
-              }}
-              disabled={saving}
-            >
-              <Box aria-hidden="true" />
-              <span>模型与 API</span>
-            </button>
-          </nav>
+        <div className="settings-tabs" role="tablist" aria-label="设置分类">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "creation"}
+            className={activeTab === "creation" ? "active" : ""}
+            onClick={() => {
+              setActiveTab("creation");
+              setMessage("");
+            }}
+            disabled={saving}
+          >
+            创作设置
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "providers"}
+            className={activeTab === "providers" ? "active" : ""}
+            onClick={() => {
+              setActiveTab("providers");
+              setMessage("");
+            }}
+            disabled={saving}
+          >
+            模型与 API
+          </button>
+        </div>
 
-          <div className="settings-main">
-            {activeTab === "creation" ? (
-              <div className="creation-settings" role="tabpanel">
-                <div className="creation-settings-header">
-                  <h3>{promptTypeLabel}</h3>
-                  <p>仅管理{managedPromptType === "image-note" ? "图文" : "长文"}生成规则，不影响当前创作模式。</p>
-                </div>
-                {promptLoading ? (
-                  <div className="prompt-settings-empty" role="status">正在读取提示词方案…</div>
-                ) : (
-                  <PromptSettings
-                    key={managedPromptType}
-                    promptState={managedPromptState}
-                    saving={saving}
-                    setSaving={setSaving}
-                    message={message}
-                    setMessage={setMessage}
-                    onUpdatePrompts={updateManagedPrompts}
-                    onPromptUtility={runManagedPromptUtility}
-                  />
-                )}
-              </div>
-            ) : (
+        {activeTab === "creation" ? (
+          <div className="creation-settings">
+            <PromptSettings
+              promptState={promptState}
+              saving={saving}
+              setSaving={setSaving}
+              message={message}
+              setMessage={setMessage}
+              onUpdatePrompts={onUpdatePrompts}
+              onPromptUtility={onPromptUtility}
+            />
+          </div>
+        ) : (
           <form className="settings-form" onSubmit={submitProviders}>
             <div className="settings-provider-list">
               {health.providers.map((provider, index) => {
@@ -1058,9 +881,7 @@ export function ApiSettingsDialog({
               </button>
             </div>
           </form>
-            )}
-          </div>
-        </div>
+        )}
       </section>
     </div>
   );

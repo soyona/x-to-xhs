@@ -10,7 +10,7 @@
 | HTTP / 代理 | 原生 `fetch`、Undici `ProxyAgent` |
 | 测试 | Node.js 内置 `node:test`、`node:assert/strict` |
 | 样式 | 单文件原生 CSS |
-| 持久化 | 本地 `.env` + `.local-data/history.json` + `.local-data/prompts/{longform,image-note}.json`，无数据库 |
+| 持久化 | 本地 `.env` + `.local-data/history.json` + `.local-data/prompts.json`，无数据库 |
 
 要求 Node.js 20.18 或更高版本。
 
@@ -83,17 +83,14 @@ npm start
 | POST | `/api/resolve` | 将 X URL 解析为正文 |
 | POST | `/api/generate` | 组装提示词并生成草稿 |
 | POST | `/api/generate-section` | 按当前提示词方案重新生成指定内容模块 |
-| GET/POST | `/api/prompts/longform` | 独立管理长文提示词方案 |
-| GET/POST | `/api/prompts/image-note` | 独立管理图文提示词方案 |
-| POST | `/api/image-note/resolve-theme` | 仅把图文视觉模块解析为白名单 Theme Token |
 
 请求体上限为 256 KiB。
 
 `/api/generate` 和 `/api/generate-section` 只接收生成任务、来源和当前稿件
 所需数据；内容规则只来自服务端当前提示词方案，不再接收独立表达偏好。
 
-原 `/api/prompts` 暂时映射到长文方案。类型化接口的 `export` 返回完整 Markdown
-模板；`import` 校验类型、版本、模块顺序及保护模块后保存为对应类型的新方案。
+`POST /api/prompts` 的 `export` 操作返回完整 Markdown 模板；`import` 操作
+要求六个 Prompt 模块完整且固定 `output` 协议未被修改，然后保存为新的本地方案。
 
 生成接口成功保存历史后返回 `historyId` 和 `historyVersion`。历史保存失败不会
 吞掉已经生成的草稿，而是返回 `historyWarning` 供页面明确提示。
