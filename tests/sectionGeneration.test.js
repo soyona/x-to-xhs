@@ -41,7 +41,6 @@ test("正文局部生成提示词使用当前方案的正文模块", () => {
   const prompt = buildSectionGenerationPrompt({
     section: "body",
     sourceContent: "原始 X 内容",
-    sourceMode: "x-content",
     sourceUrl: "https://x.com/example/status/123",
     authorHandle: "example",
     draft: PROTOTYPE_DRAFT_PASSED,
@@ -51,7 +50,8 @@ test("正文局部生成提示词使用当前方案的正文模块", () => {
 
   assert.match(prompt, /正文使用清晰的章节和短段落/);
   assert.match(prompt, /只生成1个长文正文新版本/);
-  assert.match(prompt, /"source_mode": "x-content"/);
+  assert.doesNotMatch(prompt, /source_mode|x-content/);
+  assert.match(prompt, /结构化素材参考/);
   assert.match(prompt, /"source_url": "https:\/\/x\.com\/example\/status\/123"/);
   assert.match(prompt, /"author_handle": "@example"/);
   assert.doesNotMatch(prompt, /标题规则来自当前提示词方案/);

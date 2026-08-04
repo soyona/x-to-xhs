@@ -114,14 +114,51 @@ function replacePromptModules(markdown, modules) {
   }, markdown);
 }
 
+function extractHeadingSection(content, heading) {
+  const start = content.indexOf(heading);
+  if (start < 0) return "";
+  const nextHeadingOffset = content.slice(start + heading.length).search(/\n## /u);
+  const end =
+    nextHeadingOffset < 0
+      ? content.length
+      : start + heading.length + nextHeadingOffset;
+  return content.slice(start, end).trim();
+}
+
+function migrateLegacySourceModeSection(modules, defaultModules) {
+  const legacyHeading = "## 素材来源模式（source_mode）";
+  const replacement = extractHeadingSection(
+    defaultModules.global,
+    "## 素材处理与归属边界",
+  );
+  const global = modules?.global;
+  const start = typeof global === "string" ? global.indexOf(legacyHeading) : -1;
+  if (start < 0 || !replacement) return modules;
+  const nextHeadingOffset = global
+    .slice(start + legacyHeading.length)
+    .search(/\n## /u);
+  const end =
+    nextHeadingOffset < 0
+      ? global.length
+      : start + legacyHeading.length + nextHeadingOffset;
+  return {
+    ...modules,
+    global: `${global.slice(0, start)}${replacement}${global.slice(end)}`.trim(),
+  };
+}
+
 function profileSummary(profile, defaultModules) {
+  const modules = migrateLegacySourceModeSection(
+    profile.modules,
+    defaultModules,
+  );
   return {
     id: profile.id,
     name: profile.name,
     source: "custom",
     modules: structuredClone({
       ...defaultModules,
-      ...profile.modules,
+      ...modules,
     }),
     createdAt: profile.createdAt,
     updatedAt: profile.updatedAt,
@@ -224,13 +261,17 @@ export function createPromptStore({ rootDir, dataDir, now = () => new Date() }) 
     const selected = document.profiles.find(
       (profile) => profile.id === document.selectedId,
     );
+    const selectedModules = migrateLegacySourceModeSection(
+      selected?.modules,
+      defaultProfile.modules,
+    );
     return {
       id: selected?.id || DEFAULT_PROFILE_ID,
       name: selected?.name || defaultProfile.name,
       updatedAt: selected?.updatedAt || defaultProfile.updatedAt,
       modules: {
         ...defaultProfile.modules,
-        ...(selected?.modules || {}),
+        ...(selectedModules || {}),
         output: defaultProfile.protectedModules.output,
       },
     };
@@ -238,9 +279,14 @@ export function createPromptStore({ rootDir, dataDir, now = () => new Date() }) 
 
   async function saveProfile({ id, name, modules }) {
     await enqueueWrite(async () => {
-      const document = await readDocument();
+      const [document, defaultProfile] = await Promise.all([
+        readDocument(),
+        readDefaultProfile(),
+      ]);
       const timestamp = now().toISOString();
-      const cleanedModules = cleanEditableModules(modules);
+      const cleanedModules = cleanEditableModules(
+        migrateLegacySourceModeSection(modules, defaultProfile.modules),
+      );
       const cleanedName = cleanName(name);
       let profile = id
         ? document.profiles.find((item) => item.id === id)

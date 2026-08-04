@@ -170,6 +170,41 @@ test("旧版四模块方案自动继承默认全局规则", async (t) => {
   assert.equal(effective.modules.title, "旧版标题");
 });
 
+test("旧方案的素材类型区块自动替换为统一素材规则", async (t) => {
+  const rootDir = await mkdtemp(join(tmpdir(), "x-to-xhs-prompts-root-"));
+  const dataDir = await mkdtemp(join(tmpdir(), "x-to-xhs-prompts-data-"));
+  t.after(() => Promise.all([
+    rm(rootDir, { recursive: true, force: true }),
+    rm(dataDir, { recursive: true, force: true }),
+  ]));
+  await writeFile(
+    join(rootDir, "Long-form-post-prompt.md"),
+    promptMarkdown({
+      ...modules,
+      global: "全局原则\n\n## 素材处理与归属边界\n\n统一处理原始素材。",
+    }),
+    "utf8",
+  );
+  const store = createPromptStore({ rootDir, dataDir });
+  const state = await store.saveProfile({
+    name: "旧方案",
+    modules: {
+      global:
+        "自定义前置规则\n\n## 素材来源模式（source_mode）\n\n- x-url：公开链接\n- x-content：复制原文\n- original：自主编写\n\n## 自定义尾部规则\n\n继续保留。",
+      title: "自定义标题",
+      body: "自定义正文",
+      summary: "自定义摘要",
+      tags: "自定义标签",
+    },
+  });
+
+  const global = state.profiles[0].modules.global;
+  assert.doesNotMatch(global, /source_mode|x-url|x-content|original：|自主编写/);
+  assert.match(global, /统一处理原始素材/);
+  assert.match(global, /自定义前置规则/);
+  assert.match(global, /自定义尾部规则/);
+});
+
 test("直接修改默认 Markdown 后系统默认立即更新", async (t) => {
   const rootDir = await mkdtemp(join(tmpdir(), "x-to-xhs-default-root-"));
   const dataDir = await mkdtemp(join(tmpdir(), "x-to-xhs-default-data-"));
