@@ -237,21 +237,21 @@ test("按小红书写长文流程拆分标题、正文、描述和标签", () =>
   assert.doesNotMatch(result.body, /正文小结|排版风格建议|推荐标签|审稿自查/);
 });
 
-test("根据来源模式确定性附加署名且不会重复", () => {
+test("根据来源元数据确定性附加署名且不会重复", () => {
   const source = {
-    mode: "x-content",
+    mode: "content",
     sourceUrl: "https://x.com/example/status/123",
     authorHandle: "example",
   };
   const attributed = appendSourceAttribution("正文内容。", source);
 
   assert.match(attributed, /资料及观点来源：X @example/);
-  assert.match(attributed, /原帖：https:\/\/x\.com\/example\/status\/123/);
+  assert.match(attributed, /原文链接：https:\/\/x\.com\/example\/status\/123/);
   assert.match(attributed, /AI 辅助整理/);
   assert.equal(appendSourceAttribution(attributed, source), attributed);
   assert.match(
     buildSourceAttribution({ mode: "legacy" }),
-    /资料及观点来源：用户提供的 X 内容/,
+    /资料及观点来源：用户提供的内容/,
   );
 });
 

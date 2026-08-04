@@ -16,8 +16,7 @@ import { replaceWorkflowSection } from "./workflowDraft";
 import { splitXiaohongshuDraft } from "./xiaohongshuPublish";
 import {
   SOURCE_MODES,
-  extractStandaloneHttpUrl,
-  extractXStatusUrl,
+  extractHttpUrl,
   inferSourceMode,
   normalizeSourceMode,
 } from "./sourceContext";
@@ -59,8 +58,8 @@ function prototypeSectionResult(section) {
   const candidates = {
     "longform-title": [
       "🔥AI写作总卡壳超全干货带你破局",
-      "💡别再硬翻X内容超全干货重构指南",
-      "📌X内容创作超全干货系统进阶指南",
+      "💡别再硬搬素材超全干货重构指南",
+      "📌内容创作超全干货系统进阶指南",
     ],
     body: [
       fields.body.replace(
@@ -98,7 +97,7 @@ export default function App() {
           model: "不调用模型",
           attempts: [],
           source: {
-            mode: SOURCE_MODES.X_CONTENT,
+            mode: SOURCE_MODES.CONTENT,
             content: PROTOTYPE_INPUT,
             sourceUrl: null,
             authorHandle: null,
@@ -142,15 +141,8 @@ export default function App() {
   const isGenerating = status === "generating";
   const isWorking = isGenerating;
   const detectedSourceMode = useMemo(() => inferSourceMode(input), [input]);
-  const detectedSourceUrl = useMemo(() => extractXStatusUrl(input), [input]);
-  const standaloneInputUrl = useMemo(
-    () => extractStandaloneHttpUrl(input),
-    [input],
-  );
-  const unsupportedStandaloneUrl = Boolean(
-    standaloneInputUrl && !detectedSourceUrl,
-  );
-  const sourceMode = detectedSourceMode || SOURCE_MODES.X_CONTENT;
+  const detectedSourceUrl = useMemo(() => extractHttpUrl(input), [input]);
+  const sourceMode = detectedSourceMode || SOURCE_MODES.CONTENT;
   const recognizedSourceUrl =
     detectedSourceUrl ||
     generation?.source?.sourceUrl ||
@@ -177,10 +169,6 @@ export default function App() {
 
   async function generate() {
     if (!input.trim() || isWorking) return;
-    if (unsupportedStandaloneUrl) {
-      setError("暂不支持读取非 X 网页链接，请粘贴文章正文后再生成。");
-      return;
-    }
     setStatus("generating");
     setError("");
     setGeneration(null);
@@ -309,7 +297,7 @@ export default function App() {
   function loadHistory({ record, version }) {
     const restoredSourceMode =
       normalizeSourceMode(record.source?.mode) ||
-      (record.source?.url ? SOURCE_MODES.X_URL : SOURCE_MODES.X_CONTENT);
+      (record.source?.url ? SOURCE_MODES.URL : SOURCE_MODES.CONTENT);
     const restoredSource = {
       mode: restoredSourceMode,
       content: record.source?.content || "",
@@ -358,21 +346,19 @@ export default function App() {
   }
 
   const sourceStatus =
-    unsupportedStandaloneUrl
-      ? "暂不支持读取非 X 网页链接，请粘贴文章正文"
-      : sourceMode === SOURCE_MODES.X_URL
-        ? "已识别 X 原帖链接"
-        : sourceMode === SOURCE_MODES.X_CONTENT && recognizedSourceUrl
-          ? "已识别原文内容和 X 原帖链接"
-          : "";
+    sourceMode === SOURCE_MODES.URL
+      ? "已识别网页链接，将自动读取正文"
+      : sourceMode === SOURCE_MODES.CONTENT && recognizedSourceUrl
+        ? "已识别内容和来源链接"
+        : "";
   const sourcePlaceholder =
-    "粘贴 X 原文或原帖链接；粘贴原文时，请在末尾附上原帖链接。";
+    "粘贴任意内容或网页链接；也可在内容末尾附上来源链接。";
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="wordmark" href="/" aria-label="X 转小红书首页">
+        <a className="wordmark" href="/" aria-label="内容转小红书首页">
           <span className="wordmark-code">&lt;/&gt;</span>
-          <span>X</span>
+          <span>内容</span>
           <ArrowIcon />
           <span>小红书</span>
         </a>
@@ -425,9 +411,7 @@ export default function App() {
 
             {input.trim() && sourceStatus && (
               <p
-                className={`source-mode-status ${
-                  unsupportedStandaloneUrl ? "warning" : ""
-                }`}
+                className="source-mode-status"
               >
                 <span>{sourceStatus}</span>
               </p>
@@ -443,7 +427,6 @@ export default function App() {
               aria-busy={isGenerating}
               disabled={
                 !input.trim() ||
-                unsupportedStandaloneUrl ||
                 isWorking
               }
             >

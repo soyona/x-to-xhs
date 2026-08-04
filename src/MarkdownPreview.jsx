@@ -15,7 +15,7 @@ import {
 
 const EMPTY_WORKFLOW_STAGES = [
   {
-    title: "粘贴 X 素材",
+    title: "粘贴原始素材",
     description: "在左侧粘贴内容或链接",
     Icon: FileText,
   },
@@ -49,11 +49,11 @@ function EmptyWorkflowGuide() {
   return (
     <div className="empty-state empty-workflow-guide">
       <div className="empty-workflow-heading">
-        <h2>从一条 X 推文，到可发布的小红书长文</h2>
+        <h2>从任意素材，到可发布的小红书长文</h2>
         <p>先粘贴素材，生成后按 6 个步骤完成发布。</p>
       </div>
 
-      <div className="workflow-map" aria-label="X 推文转小红书长文完整流程">
+      <div className="workflow-map" aria-label="原始素材转小红书长文完整流程">
         <ol className="workflow-map-stages">
           {EMPTY_WORKFLOW_STAGES.map(({ title, description, Icon }, index) => (
             <React.Fragment key={title}>

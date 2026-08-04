@@ -1,15 +1,21 @@
 export const SOURCE_MODES = {
-  X_URL: "x-url",
-  X_CONTENT: "x-content",
+  URL: "url",
+  CONTENT: "content",
 };
 
 const SOURCE_MODE_VALUES = new Set(Object.values(SOURCE_MODES));
+const LEGACY_SOURCE_MODES = new Map([
+  ["x-url", SOURCE_MODES.URL],
+  ["x-content", SOURCE_MODES.CONTENT],
+]);
 const X_STATUS_URL_PATTERN =
   /https?:\/\/(?:www\.)?(?:x\.com|twitter\.com)\/[^/\s]+\/status\/\d+(?:[^\s]*)?/giu;
+const HTTP_URL_PATTERN = /https?:\/\/[^\s<]+/giu;
 const TRAILING_URL_PUNCTUATION = /[)\]}>）》】〕，。！？；;:'"]+$/u;
 
 export function normalizeSourceMode(value) {
-  return SOURCE_MODE_VALUES.has(value) ? value : null;
+  if (SOURCE_MODE_VALUES.has(value)) return value;
+  return LEGACY_SOURCE_MODES.get(value) || null;
 }
 
 export function extractXStatusUrl(value = "") {
@@ -45,14 +51,18 @@ export function extractStandaloneHttpUrl(value = "") {
   }
 }
 
+export function extractHttpUrl(value = "") {
+  const match = String(value).match(HTTP_URL_PATTERN)?.[0];
+  if (!match) return null;
+  return extractStandaloneHttpUrl(match);
+}
+
 export function inferSourceMode(value = "") {
   const trimmed = String(value).trim();
   if (!trimmed) return null;
-  const sourceUrl = extractXStatusUrl(trimmed);
-  if (!sourceUrl) return null;
-  return trimmed.replace(TRAILING_URL_PUNCTUATION, "") === sourceUrl
-    ? SOURCE_MODES.X_URL
-    : SOURCE_MODES.X_CONTENT;
+  return extractStandaloneHttpUrl(trimmed)
+    ? SOURCE_MODES.URL
+    : SOURCE_MODES.CONTENT;
 }
 
 export function authorHandleFromUrl(value = "") {

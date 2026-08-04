@@ -33,7 +33,7 @@ test("Markdown 文件名使用标题并移除系统非法字符", () => {
   assert.equal(buildMarkdownFilename(""), "小红书长文-未命名.md");
 });
 
-test("Markdown 导出保留系统附加的原帖来源", () => {
+test("Markdown 导出保留系统附加的 X 来源", () => {
   const body = appendSourceAttribution("正文。", {
     mode: "x-url",
     sourceUrl: "https://x.com/example/status/123",
@@ -43,6 +43,17 @@ test("Markdown 导出保留系统附加的原帖来源", () => {
   assert.match(buildMarkdownBody(body), /资料及观点来源：X @example/);
   assert.match(
     buildMarkdownBody(body),
-    /原帖：https:\/\/x\.com\/example\/status\/123/,
+    /原文链接：https:\/\/x\.com\/example\/status\/123/,
   );
+});
+
+test("Markdown 导出为通用网页生成来源说明", () => {
+  const body = appendSourceAttribution("正文。", {
+    mode: "url",
+    sourceUrl: "https://example.com/article",
+  });
+
+  assert.match(buildMarkdownBody(body), /资料及观点来源：example\.com/);
+  assert.match(buildMarkdownBody(body), /原文链接：https:\/\/example\.com\/article/);
+  assert.doesNotMatch(buildMarkdownBody(body), /原帖|X 内容/);
 });

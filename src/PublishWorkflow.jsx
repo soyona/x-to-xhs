@@ -26,7 +26,6 @@ import {
   countPlatformCharacters,
   splitXiaohongshuDraft,
 } from "./xiaohongshuPublish";
-import { SOURCE_MODES, normalizeSourceMode } from "./sourceContext";
 import {
   toXiaohongshuPlainText,
   toXiaohongshuRichHtml,
@@ -727,15 +726,11 @@ export function PublishWorkflow({
         number="06"
         title="预览并发布"
         description={
-          normalizeSourceMode(source?.mode) === SOURCE_MODES.X_CONTENT &&
-          !source?.sourceUrl &&
-          !source?.url
-            ? "尚未提供原帖链接，请补充来源；同时确认引用、事实、图片使用和小红书 AI 内容声明后再发布。"
-            : Object.entries(sectionBodyVersions).some(
+          Object.entries(sectionBodyVersions).some(
             ([, version]) => version < bodyVersion,
           )
             ? "正文已更新，描述或标签仍基于上一版正文；请重新生成或人工确认后发布。"
-            : "确认作者、原帖链接、引用和事实无误，并使用小红书的 AI 内容声明后发布。"
+            : "确认来源归属、引用和事实无误，并使用小红书的 AI 内容声明后发布。"
         }
       />
     </div>

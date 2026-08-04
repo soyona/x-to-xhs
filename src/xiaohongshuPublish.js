@@ -129,14 +129,19 @@ export function buildSourceAttribution(source = {}) {
     .replace(/^@/u, "");
   const lines = [];
 
-  lines.push(
-    authorHandle
-      ? `资料及观点来源：X @${authorHandle}`
-      : "资料及观点来源：用户提供的 X 内容",
-  );
-  lines.push(
-    sourceUrl ? `原帖：${sourceUrl}` : "原帖链接：未提供，请在发布前补充",
-  );
+  const authorName = String(source.authorName || "").trim();
+  let sourceLabel = "用户提供的内容";
+  if (authorHandle) sourceLabel = `X @${authorHandle}`;
+  else if (authorName) sourceLabel = authorName;
+  else if (sourceUrl) {
+    try {
+      sourceLabel = new URL(sourceUrl).hostname.replace(/^www\./u, "");
+    } catch {
+      sourceLabel = "用户提供的网页内容";
+    }
+  }
+  lines.push(`资料及观点来源：${sourceLabel}`);
+  if (sourceUrl) lines.push(`原文链接：${sourceUrl}`);
   lines.push(
     "本文基于公开信息进行整理、核验与个人解读，不代表原作者立场。",
   );
