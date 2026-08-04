@@ -199,16 +199,12 @@
     width: auto;
   }
 
-  .section-copy-button {
-    width: 44px;
-    min-width: 44px;
-    min-height: 44px;
-    flex: 0 0 44px;
+  .publish-copy-actions .ui-icon-button {
+    width: var(--ui-control-lg);
+    min-width: var(--ui-control-lg);
+    min-height: var(--ui-control-lg);
+    flex: 0 0 var(--ui-control-lg);
     padding: 0;
-  }
-
-  .section-regenerate-button {
-    width: 44px;
   }
 
   .section-candidate-list.is-multiple {

@@ -4,7 +4,7 @@ import {
   CircleMinus,
   X,
   XCircle,
-} from "lucide-react";
+} from "./components/ui/icons";
 import { useEffect, useId, useRef, useState } from "react";
 
 const FAILURE_LABELS = {

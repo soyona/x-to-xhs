@@ -11,7 +11,7 @@ import {
   Send,
   Sparkles,
   Tags,
-} from "lucide-react";
+} from "./components/ui/icons";
 
 const EMPTY_WORKFLOW_STAGES = [
   {

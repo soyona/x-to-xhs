@@ -5,14 +5,18 @@ import {
   useRef,
   useState,
 } from "react";
-import { Code2, Eye } from "lucide-react";
+import { ActionGroup } from "./components/ui/ActionGroup";
+import { Button } from "./components/ui/Button";
+import { IconButton } from "./components/ui/IconButton";
 import {
   AlertIcon,
   CheckIcon,
+  CodeIcon,
   CopyIcon,
   DownloadIcon,
+  PreviewIcon,
   RefreshIcon,
-} from "./icons";
+} from "./components/ui/icons";
 import {
   buildMarkdownBody,
   buildMarkdownFilename,
@@ -241,70 +245,38 @@ function CopyStep({
               <span>内容预览</span>
             )}
           </div>
-          <div className="publish-copy-actions">
+          <ActionGroup className="publish-copy-actions" aria-label={`${title}操作`}>
             {hasMarkdownModes && (
-              <button
-                className="section-copy-button markdown-mode-toggle"
-                type="button"
-                title={
-                  viewMode === "preview"
-                    ? "切换到 Markdown Code"
-                    : "切换到 Markdown Preview"
-                }
-                aria-label={
-                  viewMode === "preview"
-                    ? "切换到 Markdown Code"
-                    : "切换到 Markdown Preview"
-                }
+              <IconButton
+                label={viewMode === "preview" ? "切换到 Markdown Code" : "切换到 Markdown Preview"}
+                variant="ghost"
+                icon={viewMode === "preview" ? <CodeIcon /> : <PreviewIcon />}
                 onClick={toggleMarkdownMode}
-              >
-                {viewMode === "preview" ? (
-                  <Code2 aria-hidden="true" />
-                ) : (
-                  <Eye aria-hidden="true" />
-                )}
-              </button>
+              />
             )}
-            {generationControls?.action}
-            <button
-              className="section-copy-button"
-              type="button"
-              title={copied ? `${copyAriaLabel}，已复制` : copyAriaLabel}
-              aria-label={copied ? `${copyAriaLabel}，已复制` : copyAriaLabel}
-              onClick={onCopy}
-              disabled={!value || disabled}
-            >
-              {copied ? <CheckIcon /> : <CopyIcon />}
-            </button>
             {onExport && (
-              <button
-                className="section-copy-button section-export-button"
-                type="button"
-                title={
+              <IconButton
+                label={
                   exportStatus === "success"
                     ? "Markdown 正文已导出"
                     : exportStatus === "error"
                       ? "重试导出 Markdown 正文"
                       : "下载 Markdown（部分格式可能不受小红书导入支持）"
                 }
-                aria-label={
-                  exportStatus === "success"
-                    ? "Markdown 正文已导出"
-                    : exportStatus === "error"
-                      ? "重试导出 Markdown 正文"
-                      : "下载 Markdown（部分格式可能不受小红书导入支持）"
-                }
+                icon={exportStatus === "success" ? <CheckIcon /> : <DownloadIcon />}
+                variant="ghost"
                 onClick={onExport}
                 disabled={!value || disabled}
-              >
-                {exportStatus === "success" ? (
-                  <CheckIcon />
-                ) : (
-                  <DownloadIcon />
-                )}
-              </button>
+              />
             )}
-          </div>
+            {generationControls?.action}
+            <IconButton
+              label={copied ? `${copyAriaLabel}，已复制` : copyAriaLabel}
+              icon={copied ? <CheckIcon /> : <CopyIcon />}
+              onClick={onCopy}
+              disabled={!value || disabled}
+            />
+          </ActionGroup>
         </div>
         {generationControls?.preview}
         {hasMarkdownModes && viewMode === "code" ? (
@@ -384,17 +356,16 @@ function WorkflowSummary({ historyCount, onRestore }) {
           </p>
         </div>
       </div>
-      <div className="workflow-summary-actions">
+      <ActionGroup className="workflow-summary-actions">
         {historyCount > 0 && (
-          <button
-            className="summary-restore-button"
-            type="button"
+          <Button
+            size="sm"
             onClick={onRestore}
           >
             恢复上一版本
-          </button>
+          </Button>
         )}
-      </div>
+      </ActionGroup>
     </div>
   );
 }
@@ -559,20 +530,12 @@ export function PublishWorkflow({
       panel: section === "longform-title" ? null : generationPanel,
       preview: titlePreview,
       action: (
-        <button
-          className="section-copy-button section-regenerate-button"
-          type="button"
-          title={isGenerating ? "正在生成…" : regenerateLabel}
-          aria-label={isGenerating ? "正在生成…" : regenerateLabel}
+        <IconButton
+          label={isGenerating ? "正在生成…" : regenerateLabel}
+          icon={isGenerating ? <span className="spinner" /> : <RefreshIcon />}
           disabled={isGenerating}
           onClick={() => regenerateSection(section)}
-        >
-          {isGenerating ? (
-            <span className="spinner" aria-hidden="true" />
-          ) : (
-            <RefreshIcon />
-          )}
-        </button>
+        />
       ),
     };
   }

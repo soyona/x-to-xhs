@@ -1,0 +1,192 @@
+.ui-button {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--ui-radius-control);
+  padding: 0 var(--ui-space-3);
+  color: var(--ui-color-text-secondary);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.ui-button.is-sm {
+  min-height: var(--ui-control-sm);
+  padding-inline: 8px;
+  font-size: 11px;
+}
+
+.ui-button.is-md {
+  min-height: var(--ui-control-md);
+}
+
+.ui-button.is-lg {
+  min-height: var(--ui-control-lg);
+  padding-inline: var(--ui-space-4);
+  font-size: 14px;
+}
+
+.ui-button.is-primary {
+  border-color: var(--ui-color-primary);
+  color: #fff;
+  background: var(--ui-color-primary);
+}
+
+.ui-button.is-primary:hover:not(:disabled) {
+  border-color: var(--ui-color-primary-hover);
+  background: var(--ui-color-primary-hover);
+}
+
+.ui-button.is-primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.ui-button.is-primary:disabled {
+  border-color: transparent;
+  color: #fff;
+  background: #e5a19d;
+}
+
+.ui-button.is-secondary {
+  border-color: var(--ui-color-border);
+  color: var(--ui-color-text-secondary);
+  background: var(--ui-color-surface);
+}
+
+.ui-button.is-secondary:hover:not(:disabled),
+.ui-button.is-ghost:hover:not(:disabled) {
+  border-color: var(--ui-color-border-strong);
+  color: var(--ui-color-text);
+  background: var(--ui-color-surface-subtle);
+}
+
+.ui-button.is-danger {
+  color: var(--ui-color-danger);
+}
+
+.ui-button.is-danger:hover:not(:disabled) {
+  background: var(--ui-color-danger-subtle);
+}
+
+.ui-button:focus-visible,
+.ui-segmented-control-item:focus-visible {
+  outline: 3px solid var(--ui-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.ui-button:disabled {
+  cursor: not-allowed;
+  color: var(--ui-color-text-disabled);
+  background: var(--ui-color-disabled-surface);
+}
+
+.ui-button.is-ghost:disabled {
+  background: transparent;
+}
+
+.ui-button-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+}
+
+.ui-button-icon svg {
+  width: var(--ui-icon-md);
+  height: var(--ui-icon-md);
+}
+
+.ui-button.is-sm .ui-button-icon svg {
+  width: var(--ui-icon-sm);
+  height: var(--ui-icon-sm);
+}
+
+.ui-button-icon .spinner {
+  width: var(--ui-icon-md);
+  height: var(--ui-icon-md);
+  border-color: rgba(86, 93, 103, 0.28);
+  border-top-color: currentColor;
+}
+
+.ui-button.is-primary .ui-button-icon .spinner {
+  border-color: rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+}
+
+.ui-icon-button {
+  width: var(--ui-control-md);
+  padding: 0;
+}
+
+.ui-icon-button.is-sm {
+  width: var(--ui-control-sm);
+}
+
+.ui-action-group {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.ui-segmented-control {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ui-space-1);
+  border: 1px solid var(--ui-color-border);
+  border-radius: var(--ui-radius-panel);
+  padding: 3px;
+  background: var(--ui-color-surface-subtle);
+}
+
+.ui-segmented-control-item {
+  min-width: 0;
+  min-height: var(--ui-control-md);
+  border: 1px solid transparent;
+  border-radius: var(--ui-radius-control);
+  padding: 0 var(--ui-space-2);
+  color: var(--ui-color-text-secondary);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ui-segmented-control-item[data-state="active"] {
+  border-color: var(--ui-color-primary-border);
+  color: var(--ui-color-primary-hover);
+  background: var(--ui-color-surface);
+  box-shadow: var(--ui-shadow-control);
+}
+
+.ui-segmented-control-item:disabled {
+  cursor: not-allowed;
+  color: var(--ui-color-text-disabled);
+}
+
+.ui-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-button {
+    transition: none;
+  }
+}

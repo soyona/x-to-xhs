@@ -111,21 +111,8 @@
   color: #9f2d27;
 }
 
-.markdown-mode-toggle {
-  color: #625e57;
-}
-
-.markdown-mode-toggle svg {
-  width: 14px;
-  height: 14px;
-  stroke-width: 1.8;
-}
-
 .publish-copy-actions {
-  display: flex;
   flex: 0 0 auto;
-  justify-content: flex-end;
-  gap: 7px;
 }
 
 .section-stale-notice {
@@ -186,16 +173,6 @@
   line-height: 1.4;
 }
 
-.section-regenerate-button {
-  color: var(--accent-dark);
-}
-
-.section-regenerate-button svg,
-.section-regenerate-button .spinner {
-  width: 15px;
-  height: 15px;
-}
-
 .section-generation-error {
   margin: 8px 0 0;
   color: var(--accent-dark);
@@ -251,8 +228,7 @@
   background: var(--red-soft);
 }
 
-.section-candidate:focus-visible,
-.section-regenerate-button:focus-visible {
+.section-candidate:focus-visible {
   outline: 2px solid rgba(240, 78, 73, 0.42);
   outline-offset: 2px;
 }
@@ -435,48 +411,6 @@
   outline-offset: -2px;
 }
 
-.section-copy-button {
-  display: flex;
-  width: 40px;
-  min-width: 40px;
-  min-height: 40px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #cfd3d9;
-  border-radius: 7px;
-  padding: 0;
-  color: #333840;
-  background: #fff;
-}
-
-.section-copy-button:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent-dark);
-}
-
-.section-copy-button:focus-visible {
-  outline: 2px solid rgba(240, 78, 73, 0.45);
-  outline-offset: 2px;
-}
-
-.section-copy-button:disabled {
-  color: #a8adb5;
-  background: #f3f3f2;
-}
-
-.section-copy-button svg {
-  width: 15px;
-  height: 15px;
-}
-
-.topbar-icon-button {
-  flex: 0 0 40px;
-}
-
-.section-export-button {
-  color: var(--accent-dark);
-}
-
 .markdown-export-feedback {
   display: block;
   border-top: 1px solid #ece8e1;
@@ -583,25 +517,6 @@
   display: flex;
   flex: 0 0 auto;
   gap: 7px;
-}
-
-.summary-restore-button {
-  min-height: 34px;
-  border-radius: 7px;
-  padding: 0 11px;
-  font-size: 10px;
-  font-weight: 750;
-}
-
-.summary-restore-button {
-  border: 1px solid #d7d9dd;
-  color: #545a63;
-  background: #fff;
-}
-
-.summary-restore-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.58;
 }
 
 .markdown-document {

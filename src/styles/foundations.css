@@ -5,18 +5,46 @@
   color: #15181d;
   background: #f4f5f7;
   font-synthesis: none;
-  --ink: #15181d;
-  --muted: #727984;
-  --soft-muted: #9ba1aa;
-  --border: #dfe2e7;
-  --surface: #ffffff;
-  --accent: #ef4b43;
-  --accent-dark: #d63b34;
+  --ui-color-canvas: #f4f5f7;
+  --ui-color-surface: #ffffff;
+  --ui-color-surface-subtle: #f7f8f9;
+  --ui-color-text: #15181d;
+  --ui-color-text-secondary: #565d67;
+  --ui-color-text-muted: #727984;
+  --ui-color-text-disabled: #9ba1aa;
+  --ui-color-border: #dfe2e7;
+  --ui-color-border-strong: #c8ccd2;
+  --ui-color-primary: #ef4b43;
+  --ui-color-primary-hover: #d63b34;
+  --ui-color-primary-border: rgba(239, 75, 67, 0.34);
+  --ui-color-focus-ring: rgba(239, 75, 67, 0.2);
+  --ui-color-danger: #9f2d27;
+  --ui-color-danger-subtle: #fff0ee;
+  --ui-color-disabled-surface: #f3f4f5;
+  --ui-radius-control: 8px;
+  --ui-radius-panel: 11px;
+  --ui-control-sm: 32px;
+  --ui-control-md: 36px;
+  --ui-control-lg: 44px;
+  --ui-icon-sm: 14px;
+  --ui-icon-md: 16px;
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-shadow-control: 0 1px 4px rgba(48, 42, 34, 0.1);
+  --ink: var(--ui-color-text);
+  --muted: var(--ui-color-text-muted);
+  --soft-muted: var(--ui-color-text-disabled);
+  --border: var(--ui-color-border);
+  --surface: var(--ui-color-surface);
+  --accent: var(--ui-color-primary);
+  --accent-dark: var(--ui-color-primary-hover);
   --green: #168b4b;
   --green-soft: #e9f7ef;
   --red-soft: #fff0ee;
-  --radius-sm: 8px;
-  --radius-md: 11px;
+  --radius-sm: var(--ui-radius-control);
+  --radius-md: var(--ui-radius-panel);
 }
 
 * {
@@ -59,4 +87,3 @@ svg {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-

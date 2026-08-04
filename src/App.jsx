@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiSettingsDialog } from "./ApiSettingsDialog";
-import { History as HistoryIcon, Settings as SettingsIcon } from "lucide-react";
-import { AlertIcon, ArrowIcon } from "./icons";
+import { Button } from "./components/ui/Button";
+import { IconButton } from "./components/ui/IconButton";
+import { SegmentedControl } from "./components/ui/SegmentedControl";
+import {
+  AlertIcon,
+  ArrowIcon,
+  HistoryIcon,
+  SettingsIcon,
+} from "./components/ui/icons";
 import { HistoryDialog } from "./HistoryDialog";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { PublishWorkflow } from "./PublishWorkflow";
@@ -38,6 +45,11 @@ async function postJson(path, body) {
 const prototypeMode =
   import.meta.env.DEV &&
   new URLSearchParams(window.location.search).get("prototype") === "1";
+
+const SOURCE_MODE_OPTIONS = [
+  { label: "原始素材", value: SOURCE_MODES.X_CONTENT },
+  { label: "自主创作", value: SOURCE_MODES.ORIGINAL },
+];
 
 function getHistoryNotice(result) {
   if (prototypeMode) return "";
@@ -432,24 +444,16 @@ export default function App() {
               : "本地运行 · 等待 API Key"}
             {prototypeMode && " · 交互稿"}
           </div>
-          <button
-            className="section-copy-button topbar-icon-button"
-            type="button"
-            title="查看历史"
-            aria-label="查看历史"
+          <IconButton
+            label="查看历史"
+            icon={<HistoryIcon />}
             onClick={() => setHistoryOpen(true)}
-          >
-            <HistoryIcon />
-          </button>
-          <button
-            className="section-copy-button topbar-icon-button"
-            type="button"
-            title="设置"
-            aria-label="设置"
+          />
+          <IconButton
+            label="设置"
+            icon={<SettingsIcon />}
             onClick={() => openSettings("creation")}
-          >
-            <SettingsIcon />
-          </button>
+          />
         </div>
       </header>
 
@@ -458,54 +462,26 @@ export default function App() {
           <div className="panel-header">
             <div className="panel-title">
               <span className="step-number">01</span>
-              <h1 id="source-heading">素材创作</h1>
+              <h1 id="source-heading">粘贴 X 内容</h1>
             </div>
           </div>
 
           <div className="source-content">
-            <div
-              className="source-mode-picker"
-              role="group"
-              aria-label="内容来源"
-            >
-              <div className="source-mode-options">
-                <button
-                  type="button"
-                  className={
-                    sourceMode === SOURCE_MODES.X_CONTENT ||
-                    sourceMode === SOURCE_MODES.X_URL
-                      ? "active"
+            <div className="source-mode-picker">
+              <SegmentedControl
+                label="内容来源"
+                value={
+                  sourceMode === SOURCE_MODES.ORIGINAL
+                    ? SOURCE_MODES.ORIGINAL
+                    : sourceMode === SOURCE_MODES.X_CONTENT ||
+                        sourceMode === SOURCE_MODES.X_URL
+                      ? SOURCE_MODES.X_CONTENT
                       : ""
-                  }
-                  aria-pressed={
-                    sourceMode === SOURCE_MODES.X_CONTENT ||
-                    sourceMode === SOURCE_MODES.X_URL
-                  }
-                  onClick={() => setSourceModeOverride(SOURCE_MODES.X_CONTENT)}
-                  disabled={
-                    isWorking ||
-                    Boolean(detectedSourceMode) ||
-                    unsupportedStandaloneUrl
-                  }
-                >
-                  原始素材
-                </button>
-                <button
-                  type="button"
-                  className={
-                    sourceMode === SOURCE_MODES.ORIGINAL ? "active" : ""
-                  }
-                  aria-pressed={sourceMode === SOURCE_MODES.ORIGINAL}
-                  onClick={() => setSourceModeOverride(SOURCE_MODES.ORIGINAL)}
-                  disabled={
-                    isWorking ||
-                    Boolean(detectedSourceMode) ||
-                    unsupportedStandaloneUrl
-                  }
-                >
-                  自主创作
-                </button>
-              </div>
+                }
+                options={SOURCE_MODE_OPTIONS}
+                disabled={isWorking || Boolean(detectedSourceMode) || unsupportedStandaloneUrl}
+                onChange={setSourceModeOverride}
+              />
             </div>
 
             <div className="source-input-shell">
@@ -534,20 +510,27 @@ export default function App() {
               >
                 <span>{sourceStatus}</span>
                 {canSupplementSourceUrl && (
-                  <button
-                    type="button"
+                  <Button
+                    className="source-supplement-action"
+                    size="sm"
+                    variant="ghost"
                     onClick={focusSourceInputForUrl}
                     aria-label="在原文末尾补充原帖链接"
                   >
                     补充链接
-                  </button>
+                  </Button>
                 )}
               </p>
             )}
 
-            <button
-              className="generate-button"
+            <Button
+              className="source-generate-action"
+              variant="primary"
+              size="lg"
+              icon={!isGenerating ? <ArrowIcon /> : <span className="spinner" />}
+              iconPosition="end"
               onClick={generate}
+              aria-busy={isGenerating}
               disabled={
                 !input.trim() ||
                 !sourceMode ||
@@ -555,10 +538,8 @@ export default function App() {
                 isWorking
               }
             >
-              <span>{isGenerating ? "正在生成长文…" : "生成小红书长文"}</span>
-              {!isGenerating && <ArrowIcon />}
-              {isGenerating && <span className="spinner" aria-hidden="true" />}
-            </button>
+              {isGenerating ? "正在生成长文…" : "生成小红书长文"}
+            </Button>
 
             {error && !draft && (
               <div className="error-message" role="alert">

@@ -108,6 +108,18 @@
 | `docs/development/validation.md` | 用户已授权修改项目文件；或明确要求浏览器、视觉、移动端验收 | 第一次编辑或调用相关验证工具之前 |
 | `memory-bank/README.md` | 当前任务需要读取、写入或归档 `memory-bank/**`；或用户要求查看下一任务 | 访问其他 Memory Bank 文件之前 |
 
+## UI System v1
+
+涉及 React、CSS、交互控件或页面布局的任务，修改前必须完整读取并遵循
+`docs/ui-system.md`。该文件是应用界面的唯一视觉规范。
+
+- 新功能必须优先复用 `src/components/ui/**` 和现有视觉 Token。
+- 业务组件不得创建新的通用按钮、图标按钮、操作组或分段选择器样式。
+- 应用图标统一经 `src/components/ui/icons.js` 引入。
+- 现有组件不能满足需求时，优先扩展公共组件；新增视觉语言、颜色、尺寸或
+  组件变体必须获得用户明确授权，并先更新 `docs/ui-system.md`。
+- `npm run check:ui` 属于 UI 修改的必需验证，不得通过扩大例外绕过。
+
 - 除非用户在当前需求中明确要求浏览器、视觉或移动端验收，否则不得调用
   浏览器、截图或视觉自动化工具；详细验证规则见
   `docs/development/validation.md`。
