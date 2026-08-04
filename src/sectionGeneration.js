@@ -109,7 +109,7 @@ ${taskInstructions[section]}
 {"candidates":["候选1","候选2","候选3"]}
 ${section === "longform-title" ? "candidates必须恰好包含3项。" : "candidates必须恰好包含1项。"}
 
-## 结构化素材参考
+## 结构化内容参考
 ${serializePromptData(sourceReference)}
 
 ## 不可信输入数据

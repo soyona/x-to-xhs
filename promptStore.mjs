@@ -126,13 +126,20 @@ function extractHeadingSection(content, heading) {
 }
 
 function migrateLegacySourceModeSection(modules, defaultModules) {
-  const legacyHeading = "## 素材来源模式（source_mode）";
+  const legacyHeadings = [
+    "## 素材来源模式（source_mode）",
+    "## 素材处理与归属边界",
+  ];
   const replacement = extractHeadingSection(
     defaultModules.global,
-    "## 素材处理与归属边界",
+    "## 内容处理与归属边界",
   );
   const global = modules?.global;
-  const start = typeof global === "string" ? global.indexOf(legacyHeading) : -1;
+  const legacyHeading =
+    typeof global === "string"
+      ? legacyHeadings.find((heading) => global.includes(heading))
+      : null;
+  const start = legacyHeading ? global.indexOf(legacyHeading) : -1;
   if (start < 0 || !replacement) return modules;
   const nextHeadingOffset = global
     .slice(start + legacyHeading.length)

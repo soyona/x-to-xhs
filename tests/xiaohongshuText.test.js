@@ -249,9 +249,9 @@ test("根据来源模式确定性附加署名且不会重复", () => {
   assert.match(attributed, /原帖：https:\/\/x\.com\/example\/status\/123/);
   assert.match(attributed, /AI 辅助整理/);
   assert.equal(appendSourceAttribution(attributed, source), attributed);
-  assert.equal(
-    buildSourceAttribution({ mode: "original" }),
-    "本文使用 AI 辅助整理，并经人工审核。",
+  assert.match(
+    buildSourceAttribution({ mode: "legacy" }),
+    /资料及观点来源：用户提供的 X 内容/,
   );
 });
 

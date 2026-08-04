@@ -194,17 +194,10 @@ textarea:focus {
   pointer-events: none;
 }
 
-.source-mode-picker {
-  flex: 0 0 auto;
-  margin-bottom: 10px;
-}
-
 .source-mode-status {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
   margin: 7px 0 0;
   color: #47705a;
   font-size: 11px;
@@ -213,15 +206,6 @@ textarea:focus {
 
 .source-mode-status.warning {
   color: #8b6320;
-}
-
-.source-supplement-action {
-  flex: 0 0 auto;
-  min-height: var(--ui-control-sm);
-  padding-inline: var(--ui-space-2);
-  color: #765017;
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 
 .source-generate-action {

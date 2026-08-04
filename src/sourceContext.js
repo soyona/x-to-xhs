@@ -1,7 +1,6 @@
 export const SOURCE_MODES = {
   X_URL: "x-url",
   X_CONTENT: "x-content",
-  ORIGINAL: "original",
 };
 
 const SOURCE_MODE_VALUES = new Set(Object.values(SOURCE_MODES));

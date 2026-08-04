@@ -735,9 +735,7 @@ export function PublishWorkflow({
             ([, version]) => version < bodyVersion,
           )
             ? "正文已更新，描述或标签仍基于上一版正文；请重新生成或人工确认后发布。"
-            : normalizeSourceMode(source?.mode) === SOURCE_MODES.ORIGINAL
-              ? "确认内容、封面和标签无误，并使用小红书的 AI 内容声明后发布。"
-              : "确认作者、原帖链接、引用和事实无误，并使用小红书的 AI 内容声明后发布。"
+            : "确认作者、原帖链接、引用和事实无误，并使用小红书的 AI 内容声明后发布。"
         }
       />
     </div>

@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ApiSettingsDialog } from "./ApiSettingsDialog";
 import { Button } from "./components/ui/Button";
 import { IconButton } from "./components/ui/IconButton";
-import { SegmentedControl } from "./components/ui/SegmentedControl";
 import {
   AlertIcon,
   ArrowIcon,
@@ -45,11 +44,6 @@ async function postJson(path, body) {
 const prototypeMode =
   import.meta.env.DEV &&
   new URLSearchParams(window.location.search).get("prototype") === "1";
-
-const SOURCE_MODE_OPTIONS = [
-  { label: "原始素材", value: SOURCE_MODES.X_CONTENT },
-  { label: "自主创作", value: SOURCE_MODES.ORIGINAL },
-];
 
 function getHistoryNotice(result) {
   if (prototypeMode) return "";
@@ -115,10 +109,6 @@ export default function App() {
       : null,
   );
   const [latestRun, setLatestRun] = useState(null);
-  const sourceInputRef = useRef(null);
-  const [sourceModeOverride, setSourceModeOverride] = useState(
-    SOURCE_MODES.X_CONTENT,
-  );
   const [draftHistory, setDraftHistory] = useState([]);
   const [workflowId, setWorkflowId] = useState(prototypeMode ? 1 : 0);
   const [generateInitialTitleCandidates, setGenerateInitialTitleCandidates] =
@@ -160,8 +150,7 @@ export default function App() {
   const unsupportedStandaloneUrl = Boolean(
     standaloneInputUrl && !detectedSourceUrl,
   );
-  const sourceMode =
-    detectedSourceMode || normalizeSourceMode(sourceModeOverride);
+  const sourceMode = detectedSourceMode || SOURCE_MODES.X_CONTENT;
   const recognizedSourceUrl =
     detectedSourceUrl ||
     generation?.source?.sourceUrl ||
@@ -192,10 +181,6 @@ export default function App() {
       setError("暂不支持读取非 X 网页链接，请粘贴文章正文后再生成。");
       return;
     }
-    if (!sourceMode) {
-      setError("请先确认这是从 X 复制的原文，还是你自主编写的内容。");
-      return;
-    }
     setStatus("generating");
     setError("");
     setGeneration(null);
@@ -218,14 +203,10 @@ export default function App() {
               650,
             );
           })
-        : await postJson("/api/generate", {
-            input,
-            sourceMode,
-          });
+        : await postJson("/api/generate", { input });
       setDraft(result.draft);
       setGeneration(result);
       setLatestRun(result);
-      setSourceModeOverride(result.source?.mode || sourceMode);
       setActiveHistory(
         result.historyId
           ? { id: result.historyId, version: result.historyVersion }
@@ -303,7 +284,6 @@ export default function App() {
       : await postJson("/api/generate-section", {
           section,
           input,
-          sourceMode,
           source: activeSource,
           draft,
           currentValue,
@@ -329,7 +309,7 @@ export default function App() {
   function loadHistory({ record, version }) {
     const restoredSourceMode =
       normalizeSourceMode(record.source?.mode) ||
-      (record.source?.url ? SOURCE_MODES.X_URL : null);
+      (record.source?.url ? SOURCE_MODES.X_URL : SOURCE_MODES.X_CONTENT);
     const restoredSource = {
       mode: restoredSourceMode,
       content: record.source?.content || "",
@@ -339,7 +319,6 @@ export default function App() {
       resolved: record.source?.type === "url",
     };
     setInput(record.source?.content || "");
-    setSourceModeOverride(restoredSourceMode);
     setDraft(version.draft);
     const restoredGeneration = {
       provider: version.provider,
@@ -357,11 +336,7 @@ export default function App() {
       version: record.currentVersion,
     });
     setDraftHistory([]);
-    setHistoryNotice(
-      version.version === record.currentVersion
-        ? "已载入历史笔记，未调用模型。"
-        : `已载入历史版本 ${version.version}，可继续重新生成需要调整的部分。`,
-    );
+    setHistoryNotice("");
     setError("");
     setStatus("done");
     setGenerateInitialTitleCandidates(false);
@@ -379,52 +354,19 @@ export default function App() {
   }
 
   function handleInputChange(event) {
-    const nextInput = event.target.value;
-    setInput(nextInput);
-    if (
-      !nextInput.trim() ||
-      inferSourceMode(nextInput) ||
-      extractStandaloneHttpUrl(nextInput)
-    ) {
-      setSourceModeOverride(
-        nextInput.trim() ? null : SOURCE_MODES.X_CONTENT,
-      );
-    }
+    setInput(event.target.value);
   }
 
   const sourceStatus =
     unsupportedStandaloneUrl
       ? "暂不支持读取非 X 网页链接，请粘贴文章正文"
-      : sourceMode === SOURCE_MODES.ORIGINAL
-      ? ""
       : sourceMode === SOURCE_MODES.X_URL
         ? "已识别 X 原帖链接"
         : sourceMode === SOURCE_MODES.X_CONTENT && recognizedSourceUrl
           ? "已识别原文内容和 X 原帖链接"
-          : sourceMode === SOURCE_MODES.X_CONTENT
-            ? "缺少原帖链接，发布前需补充"
-            : "";
+          : "";
   const sourcePlaceholder =
-    sourceMode === SOURCE_MODES.ORIGINAL
-      ? "输入你自主编写的内容，例如观点、草稿或文章素材。"
-      : sourceMode === SOURCE_MODES.X_CONTENT ||
-          sourceMode === SOURCE_MODES.X_URL
-        ? "粘贴 X 原文或原帖链接；粘贴原文时，请在末尾附上原帖链接。"
-        : "请先选择内容来源，再粘贴或输入内容。";
-  const needsSourceUrl =
-    Boolean(input.trim()) &&
-    sourceMode === SOURCE_MODES.X_CONTENT &&
-    !recognizedSourceUrl &&
-    !unsupportedStandaloneUrl;
-  const canSupplementSourceUrl = needsSourceUrl && !isWorking;
-
-  function focusSourceInputForUrl() {
-    const inputElement = sourceInputRef.current;
-    if (!inputElement) return;
-    inputElement.focus();
-    inputElement.setSelectionRange(input.length, input.length);
-  }
-
+    "粘贴 X 原文或原帖链接；粘贴原文时，请在末尾附上原帖链接。";
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -462,31 +404,13 @@ export default function App() {
           <div className="panel-header">
             <div className="panel-title">
               <span className="step-number">01</span>
-              <h1 id="source-heading">粘贴 X 内容</h1>
+              <h1 id="source-heading">内容创作</h1>
             </div>
           </div>
 
           <div className="source-content">
-            <div className="source-mode-picker">
-              <SegmentedControl
-                label="内容来源"
-                value={
-                  sourceMode === SOURCE_MODES.ORIGINAL
-                    ? SOURCE_MODES.ORIGINAL
-                    : sourceMode === SOURCE_MODES.X_CONTENT ||
-                        sourceMode === SOURCE_MODES.X_URL
-                      ? SOURCE_MODES.X_CONTENT
-                      : ""
-                }
-                options={SOURCE_MODE_OPTIONS}
-                disabled={isWorking || Boolean(detectedSourceMode) || unsupportedStandaloneUrl}
-                onChange={setSourceModeOverride}
-              />
-            </div>
-
             <div className="source-input-shell">
               <textarea
-                ref={sourceInputRef}
                 id="source-input"
                 value={input}
                 onChange={handleInputChange}
@@ -502,24 +426,10 @@ export default function App() {
             {input.trim() && sourceStatus && (
               <p
                 className={`source-mode-status ${
-                  unsupportedStandaloneUrl ||
-                  needsSourceUrl
-                    ? "warning"
-                    : ""
+                  unsupportedStandaloneUrl ? "warning" : ""
                 }`}
               >
                 <span>{sourceStatus}</span>
-                {canSupplementSourceUrl && (
-                  <Button
-                    className="source-supplement-action"
-                    size="sm"
-                    variant="ghost"
-                    onClick={focusSourceInputForUrl}
-                    aria-label="在原文末尾补充原帖链接"
-                  >
-                    补充链接
-                  </Button>
-                )}
               </p>
             )}
 
@@ -533,7 +443,6 @@ export default function App() {
               aria-busy={isGenerating}
               disabled={
                 !input.trim() ||
-                !sourceMode ||
                 unsupportedStandaloneUrl ||
                 isWorking
               }
@@ -562,7 +471,7 @@ export default function App() {
           <div className="panel-header draft-header">
             <div className="panel-title">
               <span className="step-number">02</span>
-              <h2 id="draft-heading">小红书长文</h2>
+              <h2 id="draft-heading">小红书笔记</h2>
             </div>
             <div className="toolbar-actions">
                   {draft && (
@@ -583,9 +492,7 @@ export default function App() {
                 <span className="writing-line line-two" />
                 <span className="writing-line line-three" />
                 <h2>
-                  {sourceMode === SOURCE_MODES.ORIGINAL
-                    ? "正在整理这份原创草稿"
-                    : "正在生成公开内容解读"}
+                  正在生成公开内容解读
                 </h2>
                 <p>正在生成，请保持页面打开。</p>
               </div>
