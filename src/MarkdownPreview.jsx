@@ -1,96 +1,52 @@
 import React from "react";
 import {
   AlignLeft,
-  BadgeCheck,
-  ChevronRight,
-  ClipboardList,
   FileText,
   Heading1,
-  LayoutGrid,
   ListTree,
-  Send,
-  Sparkles,
   Tags,
 } from "./components/ui/icons";
 
-const EMPTY_WORKFLOW_STAGES = [
-  {
-    title: "粘贴原始素材",
-    description: "在左侧粘贴内容或链接",
-    Icon: FileText,
-  },
-  {
-    title: "AI 二度创作",
-    description: "提炼观点并重组为中文长文",
-    Icon: Sparkles,
-  },
-  {
-    title: "分步复制到小红书",
-    description: "按 6 个步骤依次完成",
-    Icon: ClipboardList,
-  },
-  {
-    title: "预览并发布",
-    description: "复核内容后手动发布",
-    Icon: Send,
-  },
-];
-
-const EMPTY_PUBLISHING_STEPS = [
-  { number: "01", label: "长文标题", Icon: Heading1 },
-  { number: "02", label: "长文正文", Icon: AlignLeft },
-  { number: "03", label: "一键排版", Icon: LayoutGrid },
-  { number: "04", label: "正文描述", Icon: ListTree },
-  { number: "05", label: "标签", Icon: Tags },
-  { number: "06", label: "预览并发布", Icon: BadgeCheck },
+const EMPTY_COPY_SECTIONS = [
+  { label: "长文标题", description: "候选标题与重新生成", Icon: Heading1 },
+  { label: "长文正文", description: "预览、编辑、复制与导出", Icon: AlignLeft },
+  { label: "正文描述", description: "发布页正文描述", Icon: ListTree },
+  { label: "标签", description: "可直接粘贴的推荐标签", Icon: Tags },
 ];
 
 function EmptyWorkflowGuide() {
   return (
     <div className="empty-state empty-workflow-guide">
       <div className="empty-workflow-heading">
-        <h2>从任意素材，到可发布的小红书长文</h2>
-        <p>先粘贴素材，生成后按 6 个步骤完成发布。</p>
+        <span className="empty-workflow-kicker">PUBLISHING KIT</span>
+        <h2>一份素材，四个可复制区块</h2>
+        <p>从左侧加入内容或链接，生成后分别复制到小红书。</p>
       </div>
 
-      <div className="workflow-map" aria-label="原始素材转小红书长文完整流程">
-        <ol className="workflow-map-stages">
-          {EMPTY_WORKFLOW_STAGES.map(({ title, description, Icon }, index) => (
-            <React.Fragment key={title}>
-              <li className="workflow-map-stage">
-                {index === 0 && (
-                  <span className="workflow-start-cue">从左侧开始</span>
-                )}
-                <span className="workflow-stage-icon" aria-hidden="true">
-                  <Icon />
-                </span>
-                <strong>{title}</strong>
-                <small>{description}</small>
-              </li>
-              {index < EMPTY_WORKFLOW_STAGES.length - 1 && (
-                <li className="workflow-map-connector" aria-hidden="true">
-                  <span />
-                  <ChevronRight />
-                </li>
-              )}
-            </React.Fragment>
-          ))}
-        </ol>
-
-        <div className="publishing-route" aria-label="小红书长文 6 步发布流程">
-          <span className="publishing-route-branch" aria-hidden="true" />
-          <ol className="publishing-route-steps">
-            {EMPTY_PUBLISHING_STEPS.map(({ number, label, Icon }) => (
-              <li key={number}>
-                <span className="publishing-step-number">{number}</span>
-                <span className="publishing-step-icon" aria-hidden="true">
-                  <Icon />
-                </span>
-                <strong>{label}</strong>
-              </li>
-            ))}
-          </ol>
+      <div className="empty-copy-layout">
+        <div className="empty-source-card">
+          <span className="empty-card-figure">INPUT</span>
+          <span className="empty-source-icon" aria-hidden="true"><FileText /></span>
+          <div>
+            <strong>原始素材</strong>
+            <small>文本 · 网页链接 · X 内容</small>
+          </div>
         </div>
+
+        <span className="empty-copy-connector" aria-hidden="true" />
+
+        <ul className="empty-copy-grid" aria-label="生成后可复制到小红书的内容">
+          {EMPTY_COPY_SECTIONS.map(({ label, description, Icon }, index) => (
+            <li key={label}>
+              <span className="empty-card-figure">OUTPUT 0.{index + 1}</span>
+              <span className="empty-copy-icon" aria-hidden="true"><Icon /></span>
+              <div>
+                <strong>{label}</strong>
+                <small>{description}</small>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

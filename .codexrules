@@ -153,13 +153,9 @@
 - 默认使用中文界面和中文回复。
 - 页面只有两个核心工作区：`01 内容创作`、`02 小红书笔记`。
 - 两个工作区保持同一可用高度；整页禁止上下或横向滚动，内容只能在各面板内部滚动。
-- `02` 不能提供“一次复制全文”作为主流程，必须按小红书「写长文」的 6 步流程分段处理：
-  1. 长文标题
-  2. 长文正文
-  3. 一键排版
-  4. 正文描述
-  5. 标签
-  6. 预览并发布
+- `02` 不能提供“一次复制全文”作为主流程，只展示 4 个独立复制区块：
+  长文标题、长文正文、正文描述、标签。不展示“一键排版”“预览并发布”或
+  其他顺序步骤。
 - 全局、标题、正文、正文摘要和标签规则只存在于当前提示词方案，不得在代码中重复写死。
 - 页面不执行内容通过/失败判定；模型结果不符合预期时由用户主动重新生成。
 - JSON、非空结果和候选数量等技术协议必须保留，但不得扩展为内容 validation。
@@ -182,7 +178,7 @@
 | 默认提示词与内容规范 | `Long-form-post-prompt.md` | `promptStore.mjs`、提示词测试；长期契约变化时同步 `memory-bank/activeContext.md` 和 `memory-bank/progress.md` |
 | 本地提示词方案 | `promptStore.mjs` | `server.mjs`、`src/ApiSettingsDialog.jsx`、测试；架构变化时同步 `memory-bank/techContext.md` |
 | 供应商顺序、候选模型与降级策略 | `providers.mjs` | `src/ApiSettingsDialog.jsx`、README、测试 |
-| 发布分段流程 | `src/PublishWorkflow.jsx`、`src/xiaohongshuPublish.js` | 对应测试；产品契约变化时同步 `memory-bank/productContext.md` |
+| 发布复制区块 | `src/PublishWorkflow.jsx`、`src/xiaohongshuPublish.js` | 对应测试；产品契约变化时同步 `memory-bank/productContext.md` |
 | API 设置安全 | `server.mjs`、`src/ApiSettingsDialog.jsx` | `.env.example`、安全测试；架构变化时同步 `memory-bank/techContext.md` |
 | 历史笔记 | `historyStore.mjs` | `server.mjs`、`src/HistoryDialog.jsx`、测试；架构变化时同步 `memory-bank/techContext.md` |
 
@@ -194,7 +190,7 @@
 | `src/ApiSettingsDialog.jsx` | 快速设置、高级提示词、API 与模型配置弹窗 |
 | `src/HistoryDialog.jsx` | 历史列表、版本详情、载入和删除弹窗 |
 | `src/contentPreferences.js` | 快速设置字段、默认值、白名单清洗与 Prompt 注入 |
-| `src/PublishWorkflow.jsx` | 小红书 6 步发布、分段复制与主动重新生成 |
+| `src/PublishWorkflow.jsx` | 小红书 4 个复制区块与主动重新生成 |
 | `promptStore.mjs` | 默认提示词解析、本地方案存储和模块组合 |
 | `src/xiaohongshuPublish.js` | 把 Markdown 拆成标题、正文、描述、标签 |
 | `src/xiaohongshuText.js` | 清理 Markdown 为可粘贴纯文本 |

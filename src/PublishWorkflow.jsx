@@ -10,12 +10,16 @@ import { Button } from "./components/ui/Button";
 import { IconButton } from "./components/ui/IconButton";
 import {
   AlertIcon,
+  AlignLeft,
   CheckIcon,
   CodeIcon,
   CopyIcon,
   DownloadIcon,
+  Heading1,
+  ListTree,
   PreviewIcon,
   RefreshIcon,
+  Tags,
 } from "./components/ui/icons";
 import {
   buildMarkdownBody,
@@ -162,7 +166,8 @@ function GenerationPanel({
 }
 
 function CopyStep({
-  number,
+  sectionId,
+  icon,
   title,
   hint,
   value,
@@ -210,11 +215,11 @@ function CopyStep({
 
   return (
     <section
-      className="publish-step"
-      id={`publish-step-${number}`}
+      className={`publish-step is-${sectionId}`}
+      id={`publish-section-${sectionId}`}
     >
       <div className="publish-step-heading">
-        <span className="publish-step-number">{number}</span>
+        <span className="publish-step-icon" aria-hidden="true">{icon}</span>
         <div>
           <h3>{title}</h3>
           <p>{hint}</p>
@@ -282,7 +287,7 @@ function CopyStep({
           <textarea
             ref={codeEditorRef}
             className="publish-code-editor"
-            id={`publish-step-${number}-preview`}
+            id={`publish-section-${sectionId}-preview`}
             aria-label={`${title} Markdown 编辑器`}
             value={codeValue}
             onChange={(event) => setCodeValue(event.target.value)}
@@ -295,14 +300,14 @@ function CopyStep({
         ) : hasMarkdownModes ? (
           <div
             className="publish-rich-preview"
-            id={`publish-step-${number}-preview`}
+            id={`publish-section-${sectionId}-preview`}
             aria-label={`${title}效果预览`}
             tabIndex="0"
             dangerouslySetInnerHTML={{ __html: previewHtml }}
           />
         ) : generationControls?.preview ? null : (
           <pre
-            id={`publish-step-${number}-preview`}
+            id={`publish-section-${sectionId}-preview`}
             aria-label={`${title}内容预览`}
             tabIndex="0"
           >
@@ -325,22 +330,6 @@ function CopyStep({
   );
 }
 
-function ActionStep({ number, title, description, children }) {
-  return (
-    <section className="publish-step is-action" id={`publish-step-${number}`}>
-      <div className="publish-step-heading">
-        <span className="publish-step-number">{number}</span>
-        <div>
-          <h3>{title}</h3>
-          <p>{description}</p>
-        </div>
-        <span className="platform-action">在小红书操作</span>
-      </div>
-      {children}
-    </section>
-  );
-}
-
 function WorkflowSummary({ historyCount, onRestore }) {
   return (
     <div className="workflow-summary pass" aria-live="polite">
@@ -349,10 +338,8 @@ function WorkflowSummary({ historyCount, onRestore }) {
           <CheckIcon />
         </span>
         <div>
-          <strong>内容已生成，可按需要选择或重新生成</strong>
-          <p>
-            内容质量由当前提示词方案控制，系统不再执行内容规则判定。
-          </p>
+          <strong>发布素材已准备好</strong>
+          <p>分别复制标题、正文、正文描述和标签到小红书。</p>
         </div>
       </div>
       <ActionGroup className="workflow-summary-actions">
@@ -631,8 +618,9 @@ export function PublishWorkflow({
       />
 
       <CopyStep
-        number="01"
-        title="输入长文标题"
+        sectionId="title"
+        icon={<Heading1 />}
+        title="长文标题"
         hint="粘贴到「写长文」编辑器的标题区域。"
         value={fields.longformTitle}
         meta={`${fields.counts.longformTitle}字`}
@@ -651,8 +639,9 @@ export function PublishWorkflow({
       />
 
       <CopyStep
-        number="02"
-        title="输入长文正文"
+        sectionId="body"
+        icon={<AlignLeft />}
+        title="长文正文"
         hint="Preview 查看粘贴后的排版效果，Code 可编辑 Markdown；复制正文可保留完整格式。"
         value={attributedBody}
         meta={`${countPlatformCharacters(attributedBody).toLocaleString()}字`}
@@ -671,15 +660,10 @@ export function PublishWorkflow({
         previewHtml={attributedBodyHtml}
       />
 
-      <ActionStep
-        number="03"
-        title="点击「一键排版」"
-        description="由小红书生成封面和内容卡片，确认排版后继续。"
-      />
-
       <CopyStep
-        number="04"
-        title="输入正文描述"
+        sectionId="description"
+        icon={<ListTree />}
+        title="正文描述"
         hint={
           fields.sources.description === "summary"
             ? "使用生成稿中的「正文小结 / 摘要」；平台限制 1000 字。"
@@ -704,8 +688,9 @@ export function PublishWorkflow({
       />
 
       <CopyStep
-        number="05"
-        title="输入标签"
+        sectionId="tags"
+        icon={<Tags />}
+        title="标签"
         hint={
           fields.sources.tags === "default-fallback"
             ? "未识别到推荐标签，已补充通用 AI 标签，可在发布前调整。"
@@ -722,17 +707,6 @@ export function PublishWorkflow({
         disabled={false}
       />
 
-      <ActionStep
-        number="06"
-        title="预览并发布"
-        description={
-          Object.entries(sectionBodyVersions).some(
-            ([, version]) => version < bodyVersion,
-          )
-            ? "正文已更新，描述或标签仍基于上一版正文；请重新生成或人工确认后发布。"
-            : "确认来源归属、引用和事实无误，并使用小红书的 AI 内容声明后发布。"
-        }
-      />
     </div>
   );
 }

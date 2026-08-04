@@ -94,50 +94,23 @@
     font-size: 22px;
   }
 
-  .workflow-map {
-    margin-top: 42px;
-  }
-
-  .workflow-map-stages {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-    gap: 28px 16px;
-  }
-
-  .workflow-map-stage small {
-    display: none;
-  }
-
-  .workflow-map-connector {
-    display: none;
-  }
-
-  .workflow-start-cue {
-    top: -30px;
-    left: 12px;
-  }
-
-  .workflow-start-cue::after {
-    display: none;
-  }
-
-  .publishing-route {
+  .empty-copy-layout {
+    grid-template-columns: 1fr;
+    gap: 12px;
     width: 100%;
-    margin: 36px 0 0;
+    margin-top: 28px;
   }
 
-  .publishing-route-branch {
+  .empty-copy-connector {
     display: none;
   }
 
-  .publishing-route-steps {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    row-gap: 14px;
+  .empty-source-card {
+    min-height: 104px;
   }
 
-  .publishing-route-steps::before {
-    right: 12%;
-    left: 12%;
+  .empty-copy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .publish-workflow {
@@ -146,7 +119,7 @@
   }
 
   .publish-step {
-    padding: 11px;
+    border-radius: 9px;
   }
 
   .publish-step-heading {
@@ -154,7 +127,7 @@
     gap: 8px;
   }
 
-  .publish-step-number {
+  .publish-step-icon {
     width: 32px;
     height: 32px;
   }
@@ -175,12 +148,8 @@
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 
-  .platform-action {
-    font-size: 9px;
-  }
-
   .publish-copy-area {
-    margin-top: 9px;
+    margin-top: 0;
   }
 
   .publish-copy-toolbar {
