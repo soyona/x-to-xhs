@@ -47,7 +47,7 @@ test("默认提示词必须包含完整模块", () => {
 
 test("默认提示词约束第三方素材不得补写未展开的技术内容", async () => {
   const markdown = await readFile(
-    join(process.cwd(), "Long-form-post-prompt.md"),
+    join(process.cwd(), "prompts/longform/default.md"),
     "utf8",
   );
   const parsed = parsePromptModules(markdown);
@@ -63,7 +63,7 @@ test("默认提示词约束第三方素材不得补写未展开的技术内容",
 
 test("默认提示词为局部正文和有限素材提供明确降级规则", async () => {
   const markdown = await readFile(
-    join(process.cwd(), "Long-form-post-prompt.md"),
+    join(process.cwd(), "prompts/longform/default.md"),
     "utf8",
   );
   const parsed = parsePromptModules(markdown);
@@ -77,7 +77,7 @@ test("默认提示词为局部正文和有限素材提供明确降级规则", as
 
 test("默认提示词使用条件式专业角色并避免输出模板占位符", async () => {
   const markdown = await readFile(
-    join(process.cwd(), "Long-form-post-prompt.md"),
+    join(process.cwd(), "prompts/longform/default.md"),
     "utf8",
   );
   const parsed = parsePromptModules(markdown);

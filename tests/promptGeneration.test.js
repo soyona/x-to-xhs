@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildPrompt } from "../server.mjs";
 
-test("整稿生成只使用当前提示词方案和结构化来源信息", async () => {
+test("整稿生成只使用当前提示词方案且不注入来源分类", async () => {
   const prompt = await buildPrompt(
     {
       mode: "x-content",
@@ -24,8 +24,8 @@ test("整稿生成只使用当前提示词方案和结构化来源信息", async
   );
 
   assert.match(prompt, /全局事实边界/);
-  assert.match(prompt, /"source_mode": "x-content"/);
   assert.match(prompt, /"原始 X 内容"/);
+  assert.doesNotMatch(prompt, /source_mode|结构化来源信息|自主编写内容/);
   assert.doesNotMatch(prompt, /本次快速设置|表达偏好|目标读者/);
 });
 

@@ -190,6 +190,7 @@ export function HistoryDialog({
                       {record.currentVersion}
                     </span>
                     <small>
+                      {record.noteType === "image-note" ? "图文笔记 · " : "长文笔记 · "}
                       {record.promptProfile?.name || "历史提示词方案"}
                       {record.generation?.providerLabel
                         ? ` · ${record.generation.providerLabel}`
@@ -273,7 +274,11 @@ export function HistoryDialog({
                   placement="history"
                 />
 
-                <pre className="history-draft">{activeVersion.draft}</pre>
+                <pre className="history-draft">
+                  {detail.noteType === "image-note"
+                    ? JSON.stringify(activeVersion.imageNote || detail.imageNote, null, 2)
+                    : activeVersion.draft}
+                </pre>
 
                 <div className="history-actions">
                   {confirmDeleteId === detail.id ? (

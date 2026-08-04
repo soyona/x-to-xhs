@@ -145,6 +145,23 @@
     padding: 12px 8px 26px;
   }
 
+  .publish-workflow-frame {
+    grid-template-columns: 132px minmax(0, 1fr);
+  }
+
+  .workflow-rail {
+    padding: 12px 6px;
+  }
+
+  .workflow-rail-step {
+    grid-template-columns: 23px minmax(0, 1fr);
+    padding: 8px 7px;
+  }
+
+  .workflow-rail-state {
+    display: none;
+  }
+
   .publish-step {
     padding: 11px;
   }
@@ -374,8 +391,17 @@
     padding: 16px 16px 10px;
   }
 
-  .settings-tabs {
-    margin: 0 16px 12px;
+  .settings-layout {
+    grid-template-columns: 160px minmax(0, 1fr);
+  }
+
+  .settings-sidebar {
+    padding: 12px 8px;
+  }
+
+  .settings-prompt-nav {
+    margin-left: 12px;
+    padding-left: 5px;
   }
 
   .settings-provider-list {
@@ -383,11 +409,15 @@
   }
 
   .creation-settings {
-    padding: 0 16px 14px;
+    padding: 0;
+  }
+
+  .creation-settings-header {
+    padding: 14px 16px 12px;
   }
 
   .prompt-settings {
-    padding: 0 16px 14px;
+    padding: 12px 16px;
   }
 
   .prompt-profile-toolbar {
@@ -396,7 +426,12 @@
   }
 
   .prompt-module-tabs {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 1fr;
+  }
+
+  .prompt-editor-layout {
+    grid-template-columns: 106px minmax(0, 1fr);
+    gap: 10px;
   }
 
   .prompt-module-editor textarea {

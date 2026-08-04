@@ -4,3 +4,6 @@
 @import "./styles/settings.css";
 @import "./styles/history.css";
 @import "./styles/responsive.css";
+@import "./styles/image-note.css";
+@import "./styles/image-note-candidates.css";
+@import "./styles/publishing-kit.css";
