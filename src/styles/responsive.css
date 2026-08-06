@@ -95,7 +95,13 @@
     font-size: 22px;
   }
 
-  .empty-mario-visual {
+  .empty-transformers-visual {
+    width: 302px;
+    height: 235px;
+  }
+
+  .empty-mario-visual,
+  .empty-minion-visual {
     width: 269px;
     height: 235px;
   }
