@@ -38,7 +38,8 @@
 - 应用控件圆角统一使用 `8px`；面板圆角使用 `11px`。
 - 常规图标使用 `16px`，紧凑图标使用 `14px`。
 - 操作按钮文字使用 `12px`；主操作使用 `13px` 至 `14px`。
-- 品牌色只用于 Primary、当前选择、焦点和必要状态，不用于装饰。
+- 品牌色采用高对比近黑色，只用于 Primary、当前选择和焦点，不用于装饰。
+- 成功、警告、危险和信息色只用于对应状态，不得代替品牌色或操作层级。
 - 所有交互控件必须提供 hover、active、focus-visible、disabled 和 loading 状态。
 - 成功或失败不能只依靠颜色表达；复制与下载成功应同时显示图标和文字。
 
@@ -59,6 +60,65 @@
 - Error：在操作附近显示明确错误，并允许重试。
 - Disabled：降低对比度但仍保持标签可读；不得只移除鼠标事件。
 - Focus：所有键盘可达控件使用统一焦点环，不得移除 outline 后不提供替代样式。
+
+## 颜色系统：Monochrome Utility
+
+颜色语言参考 X 的直接高对比与 Linear 的冷灰层级。界面约 90% 使用中性色、
+8% 使用近黑色强调、2% 使用低饱和状态色。黑色表达操作优先级，不作为大面积装饰。
+不使用渐变、彩色装饰或额外页面品牌色；长文内容中的语义高亮除外。
+
+### 基础与表面 Token
+
+| Token | 色值 | 用途 |
+|---|---|---|
+| `--ui-color-canvas` | `#f4f5f7` | 应用背景 |
+| `--ui-color-surface` | `#ffffff` | 工作区、输入框、弹窗 |
+| `--ui-color-surface-subtle` | `#fafbfc` | 工具栏和次级区域 |
+| `--ui-color-surface-hover` | `#f1f2f4` | Ghost、列表悬停 |
+| `--ui-color-surface-active` | `#e8eaed` | 按下和中性高亮 |
+| `--ui-color-surface-inverse` | `#15181d` | 主操作和反色表面 |
+| `--ui-color-surface-disabled` | `#eceef0` | 禁用控件 |
+
+### 文字、边框与操作 Token
+
+| Token | 色值 | 用途 |
+|---|---|---|
+| `--ui-color-text` | `#15181d` | 标题、正文、输入内容 |
+| `--ui-color-text-secondary` | `#565d67` | 描述和次级正文 |
+| `--ui-color-text-muted` | `#68707a` | 时间、计数和辅助标签 |
+| `--ui-color-text-disabled` | `#9ba1aa` | 禁用文字，不用于正文 |
+| `--ui-color-text-inverse` | `#ffffff` | 深色表面上的文字 |
+| `--ui-color-border` | `#dfe2e7` | 默认边框 |
+| `--ui-color-border-strong` | `#c8ccd2` | 悬停、重要分隔和当前选择 |
+| `--ui-color-primary` | `#15181d` | Primary 和当前选择 |
+| `--ui-color-primary-hover` | `#2b2f35` | Primary 悬停 |
+| `--ui-color-primary-active` | `#090a0c` | Primary 按下 |
+| `--ui-color-focus` | `#15181d` | 键盘焦点环 |
+
+Primary 使用近黑底白字；Secondary 使用白底灰边；Ghost 默认透明，悬停使用
+`surface-hover`。当前选择使用浅灰底配近黑边框或选中图标。普通链接使用主文字色并
+保留下划线，不依赖蓝色识别。
+
+### 状态 Token
+
+| 状态 | 文字与图标 | 弱背景 |
+|---|---|---|
+| Success | `#147a45` | `#eaf6ef` |
+| Warning | `#8a5a13` | `#fff7e6` |
+| Danger | `#b3261e` | `#fff1f0` |
+| Info | `#3559a6` | `#eff4ff` |
+
+状态色只用于提示、图标和局部弱背景。任何成功、警告或失败状态必须同时有图标或文字。
+
+### 使用与可访问性
+
+- 业务组件禁止写入十六进制、`rgb()`、`rgba()` 或 `hsl()` 色值；所有颜色必须来自
+  `src/styles/foundations.css` 中的语义 Token。
+- 新页面先复用现有语义 Token；确需新增颜色时，必须先获得授权并更新本规范和
+  `foundations.css`，再修改页面。
+- `#15181d` 与白色对比度约为 `17.8:1`，`#565d67` 与白色约为 `6.65:1`。
+- `text-disabled` 只表达不可交互状态；小字号正文不得使用。
+- 键盘焦点使用 `2px` 近黑色焦点环和 `2px` 外偏移，不得仅依赖阴影或背景变化。
 
 ## 响应式规则
 

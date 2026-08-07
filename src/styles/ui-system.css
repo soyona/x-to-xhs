@@ -38,7 +38,7 @@
 
 .ui-button.is-primary {
   border-color: var(--ui-color-primary);
-  color: #fff;
+  color: var(--ui-color-text-inverse);
   background: var(--ui-color-primary);
 }
 
@@ -48,13 +48,15 @@
 }
 
 .ui-button.is-primary:active:not(:disabled) {
+  border-color: var(--ui-color-primary-active);
+  background: var(--ui-color-primary-active);
   transform: translateY(1px);
 }
 
 .ui-button.is-primary:disabled {
   border-color: transparent;
-  color: #fff;
-  background: #e5a19d;
+  color: var(--ui-color-text-disabled);
+  background: var(--ui-color-surface-disabled);
 }
 
 .ui-button.is-secondary {
@@ -80,14 +82,14 @@
 
 .ui-button:focus-visible,
 .ui-segmented-control-item:focus-visible {
-  outline: 3px solid var(--ui-color-focus-ring);
+  outline: 2px solid var(--ui-color-focus);
   outline-offset: 2px;
 }
 
 .ui-button:disabled {
   cursor: not-allowed;
   color: var(--ui-color-text-disabled);
-  background: var(--ui-color-disabled-surface);
+  background: var(--ui-color-surface-disabled);
 }
 
 .ui-button.is-ghost:disabled {
@@ -113,13 +115,13 @@
 .ui-button-icon .spinner {
   width: var(--ui-icon-md);
   height: var(--ui-icon-md);
-  border-color: rgba(86, 93, 103, 0.28);
+  border-color: var(--ui-color-spinner-track);
   border-top-color: currentColor;
 }
 
 .ui-button.is-primary .ui-button-icon .spinner {
-  border-color: rgba(255, 255, 255, 0.45);
-  border-top-color: #fff;
+  border-color: var(--ui-color-border-inverse);
+  border-top-color: var(--ui-color-text-inverse);
 }
 
 .ui-icon-button {

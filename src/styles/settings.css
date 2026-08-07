@@ -5,7 +5,7 @@
   inset: 0;
   place-items: center;
   padding: 18px;
-  background: rgba(21, 24, 29, 0.46);
+  background: var(--ui-color-overlay);
   backdrop-filter: blur(3px);
 }
 
@@ -16,10 +16,10 @@
   max-height: min(720px, calc(100dvh - 36px));
   grid-template-rows: auto auto minmax(0, 1fr);
   overflow: hidden;
-  border: 1px solid #d8dbe0;
+  border: 1px solid var(--ui-color-border);
   border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 24px 80px rgba(21, 24, 29, 0.24);
+  background: var(--ui-color-surface);
+  box-shadow: 0 24px 80px var(--ui-color-shadow-strong);
 }
 
 .settings-dialog-header {
@@ -48,8 +48,8 @@
   place-items: center;
   border: 1px solid var(--border);
   border-radius: 8px;
-  color: #5e6570;
-  background: #f7f8f9;
+  color: var(--ui-color-text-secondary);
+  background: var(--ui-color-surface-hover);
   font-size: 22px;
   line-height: 1;
 }
@@ -66,7 +66,7 @@
   min-height: 38px;
   border: 0;
   padding: 0 12px;
-  color: #6b727c;
+  color: var(--ui-color-text-muted);
   background: transparent;
   font-size: 11px;
   font-weight: 750;
@@ -111,7 +111,7 @@
   flex: 1;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--ui-color-surface);
 }
 
 .creation-settings .prompt-settings {
@@ -136,8 +136,8 @@
   margin: 0 22px 18px;
   border-radius: 8px;
   padding: 16px;
-  color: #74594c;
-  background: #fff4ef;
+  color: var(--ui-color-danger);
+  background: var(--ui-color-danger-subtle);
   font-size: 11px;
   line-height: 1.6;
 }
@@ -155,7 +155,7 @@
   position: relative;
   min-width: 0;
   gap: 6px;
-  color: #555c66;
+  color: var(--ui-color-text-secondary);
   font-size: 10px;
   font-weight: 700;
 }
@@ -182,12 +182,12 @@
 .prompt-name-field input {
   width: 100%;
   min-height: 38px;
-  border: 1px solid #cfd3d9;
+  border: 1px solid var(--ui-color-border-strong);
   border-radius: 7px;
   outline: none;
   padding: 0 10px;
   color: var(--ink);
-  background: #fff;
+  background: var(--ui-color-surface);
   font-size: 11px;
 }
 
@@ -201,28 +201,28 @@
   min-height: 36px;
   border: 1px solid var(--border);
   border-radius: 7px;
-  color: #68707a;
-  background: #f7f8f9;
+  color: var(--ui-color-text-muted);
+  background: var(--ui-color-surface-hover);
   font-size: 10px;
   font-weight: 750;
 }
 
 .prompt-module-tabs button.active {
-  border-color: rgba(239, 75, 67, 0.38);
+  border-color: var(--ui-color-primary-border);
   color: var(--accent);
-  background: rgba(239, 75, 67, 0.07);
+  background: var(--ui-color-selection-subtle);
 }
 
 .prompt-module-editor textarea {
   width: 100%;
   min-height: 250px;
   resize: vertical;
-  border: 1px solid #cfd3d9;
+  border: 1px solid var(--ui-color-border-strong);
   border-radius: 8px;
   outline: none;
   padding: 12px 12px 24px;
   color: var(--ink);
-  background: #fff;
+  background: var(--ui-color-surface);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
   line-height: 1.6;
@@ -232,7 +232,7 @@
 .prompt-profile-toolbar select:focus,
 .prompt-name-field input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(239, 75, 67, 0.1);
+  box-shadow: 0 0 0 3px var(--ui-color-focus-ring);
 }
 
 .prompt-module-editor > span {
@@ -259,11 +259,11 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
-  background: #fafbfc;
+  background: var(--ui-color-surface-subtle);
 }
 
 .settings-provider.expanded {
-  background: #fff;
+  background: var(--ui-color-surface);
 }
 
 .settings-provider-summary {
@@ -313,13 +313,13 @@
 }
 
 .settings-provider-identity b.missing {
-  color: #8b6663;
+  color: var(--ui-color-danger);
   background: var(--red-soft);
 }
 
 .settings-provider-model-summary {
   overflow: hidden;
-  color: #6b727c;
+  color: var(--ui-color-text-muted);
   font-size: 10px;
   font-weight: 650;
   text-overflow: ellipsis;
@@ -333,17 +333,17 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  border: 1px solid #d4d7dc;
+  border: 1px solid var(--ui-color-border);
   border-radius: 7px;
   padding: 0 9px;
-  color: #555c66;
-  background: #fff;
+  color: var(--ui-color-text-secondary);
+  background: var(--ui-color-surface);
   font-size: 10px;
   font-weight: 750;
 }
 
 .settings-provider-manage:hover {
-  border-color: #bec3ca;
+  border-color: var(--ui-color-border-strong);
   color: var(--ink);
 }
 
@@ -362,14 +362,14 @@
 .settings-model-add button:focus-visible,
 .settings-replace-key button:focus-visible,
 .settings-provider-danger button:focus-visible {
-  outline: 2px solid rgba(239, 75, 67, 0.35);
+  outline: 2px solid var(--ui-color-focus-ring);
   outline-offset: 2px;
 }
 
 .settings-provider-details {
   border-top: 1px solid var(--border);
   padding: 12px;
-  background: #fff;
+  background: var(--ui-color-surface);
 }
 
 .settings-provider-fields {
@@ -383,14 +383,14 @@
   display: grid;
   min-width: 0;
   gap: 6px;
-  color: #555c66;
+  color: var(--ui-color-text-secondary);
   font-size: 10px;
   font-weight: 700;
   line-height: 1.2;
 }
 
 .settings-provider-details label small {
-  color: #747b85;
+  color: var(--ui-color-text-muted);
   font-size: 9px;
   font-weight: 500;
   line-height: 1.4;
@@ -400,7 +400,7 @@
   display: grid;
   min-width: 0;
   gap: 6px;
-  color: #555c66;
+  color: var(--ui-color-text-secondary);
   font-size: 10px;
   font-weight: 700;
 }
@@ -416,10 +416,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  border: 1px solid #dfe2e6;
+  border: 1px solid var(--ui-color-border);
   border-radius: 7px;
   padding: 5px 8px;
-  background: #fafbfc;
+  background: var(--ui-color-surface-subtle);
 }
 
 .settings-provider-details .settings-model-option label {
@@ -435,7 +435,7 @@
 }
 
 .settings-model-option small {
-  color: #8a9099;
+  color: var(--ui-color-text-disabled);
   font-size: 9px;
   font-weight: 600;
 }
@@ -444,18 +444,18 @@
 .settings-model-add button {
   min-height: 30px;
   flex: 0 0 auto;
-  border: 1px solid #d4d7dc;
+  border: 1px solid var(--ui-color-border);
   border-radius: 6px;
   padding: 0 9px;
-  color: #555c66;
-  background: #fff;
+  color: var(--ui-color-text-secondary);
+  background: var(--ui-color-surface);
   font-size: 9px;
   font-weight: 750;
 }
 
 .settings-model-option button:hover,
 .settings-model-add button:hover {
-  border-color: #bec3ca;
+  border-color: var(--ui-color-border-strong);
   color: var(--ink);
 }
 
@@ -470,12 +470,12 @@
 .settings-saved-key {
   width: 100%;
   min-height: 38px;
-  border: 1px solid #cfd3d9;
+  border: 1px solid var(--ui-color-border-strong);
   border-radius: 7px;
   outline: none;
   padding: 0 10px;
   color: var(--ink);
-  background: #fff;
+  background: var(--ui-color-surface);
   font-size: 11px;
   line-height: normal;
 }
@@ -483,18 +483,18 @@
 .settings-saved-key {
   display: flex;
   align-items: center;
-  color: #59616b;
-  background: #f4f5f7;
+  color: var(--ui-color-text-secondary);
+  background: var(--ui-color-canvas);
 }
 
 .settings-provider-details input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(239, 75, 67, 0.1);
+  box-shadow: 0 0 0 3px var(--ui-color-focus-ring);
 }
 
 .settings-provider-details input:disabled {
-  color: #9ba1aa;
-  background: #f0f1f3;
+  color: var(--ui-color-text-disabled);
+  background: var(--ui-color-surface-disabled);
 }
 
 .settings-replace-key {
@@ -505,17 +505,17 @@
 
 .settings-replace-key button {
   min-height: 34px;
-  border: 1px solid #d4d7dc;
+  border: 1px solid var(--ui-color-border);
   border-radius: 7px;
   padding: 0 12px;
-  color: #555c66;
-  background: #fff;
+  color: var(--ui-color-text-secondary);
+  background: var(--ui-color-surface);
   font-size: 10px;
   font-weight: 750;
 }
 
 .settings-replace-key button:hover {
-  border-color: #bec3ca;
+  border-color: var(--ui-color-border-strong);
   color: var(--ink);
 }
 
@@ -536,12 +536,12 @@
 }
 
 .settings-provider-danger strong {
-  color: var(--accent-dark);
+  color: var(--ui-color-danger);
   font-size: 10px;
 }
 
 .settings-provider-danger span {
-  color: #747b85;
+  color: var(--ui-color-text-muted);
   font-size: 9px;
   line-height: 1.4;
 }
@@ -549,18 +549,18 @@
 .settings-provider-danger button {
   min-height: 34px;
   flex: 0 0 auto;
-  border: 1px solid rgba(239, 75, 67, 0.6);
+  border: 1px solid var(--ui-color-primary-border);
   border-radius: 7px;
   padding: 0 12px;
   color: var(--accent-dark);
-  background: #fff;
+  background: var(--ui-color-surface);
   font-size: 10px;
   font-weight: 750;
 }
 
 .settings-provider-danger button:hover {
-  color: #fff;
-  background: var(--accent);
+  color: var(--ui-color-text-inverse);
+  background: var(--ui-color-danger-strong);
 }
 
 .settings-provider-danger.pending {
@@ -573,7 +573,7 @@
 
 .settings-message {
   margin: 0 22px 10px;
-  color: var(--accent-dark);
+  color: var(--ui-color-danger);
   font-size: 11px;
 }
 
@@ -581,18 +581,18 @@
   margin: 0;
   border-top: 1px solid var(--border);
   padding: 9px 14px;
-  color: #496154;
+  color: var(--ui-color-success);
   background: var(--green-soft);
   line-height: 1.45;
 }
 
 .prompt-action-message.is-info {
-  color: #6f5b32;
-  background: #fff9ec;
+  color: var(--ui-color-info);
+  background: var(--ui-color-info-subtle);
 }
 
 .prompt-action-message.is-error {
-  color: #9f2d27;
+  color: var(--ui-color-danger);
   background: var(--red-soft);
 }
 
@@ -616,15 +616,15 @@
 }
 
 .settings-cancel {
-  border: 1px solid #d4d7dc;
-  color: #555c66;
-  background: #fff;
+  border: 1px solid var(--ui-color-border);
+  color: var(--ui-color-text-secondary);
+  background: var(--ui-color-surface);
 }
 
 .settings-reset {
   margin-right: auto;
   border: 0;
-  color: #6b727c;
+  color: var(--ui-color-text-muted);
   background: transparent;
 }
 
@@ -634,12 +634,12 @@
 
 .settings-save {
   border: 0;
-  color: #fff;
+  color: var(--ui-color-text-inverse);
   background: var(--accent);
 }
 
 .settings-save:disabled {
-  background: #e5a19d;
+  background: var(--ui-color-surface-disabled);
 }
 
 .settings-delete-confirm {
@@ -653,7 +653,7 @@
 
 .settings-delete-confirm > span {
   overflow: hidden;
-  color: #8b3a35;
+  color: var(--ui-color-danger);
   font-size: 10px;
   font-weight: 650;
   text-overflow: ellipsis;
@@ -666,12 +666,12 @@
   border: 0;
   border-radius: 7px;
   padding: 0 16px;
-  color: #fff;
-  background: #b83d36;
+  color: var(--ui-color-text-inverse);
+  background: var(--ui-color-danger-strong);
   font-size: 11px;
   font-weight: 750;
 }
 
 .settings-delete-confirm-button:disabled {
-  background: #d99b97;
+  background: var(--ui-color-danger-border);
 }

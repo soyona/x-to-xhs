@@ -4,7 +4,7 @@
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
-  background: #f4f5f7;
+  background: var(--ui-color-canvas);
 }
 
 .topbar,
@@ -12,7 +12,7 @@
   display: flex;
   align-items: center;
   border-color: var(--border);
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--ui-color-surface-translucent);
 }
 
 .topbar {
@@ -43,7 +43,7 @@
   place-items: center;
   border: 1px solid var(--border);
   border-radius: 9px;
-  background: #f7f8f9;
+  background: var(--ui-color-surface-hover);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
 }
@@ -52,7 +52,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #515761;
+  color: var(--ui-color-text-secondary);
   font-size: 13px;
   font-weight: 650;
 }
@@ -67,15 +67,15 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #aeb3ba;
+  background: var(--ui-color-text-disabled);
 }
 
 .status-dot.ready {
-  background: #20a35b;
+  background: var(--ui-color-success);
 }
 
 .status-dot.not-ready {
-  background: var(--accent);
+  background: var(--ui-color-danger);
 }
 
 .workspace {
@@ -145,12 +145,12 @@ textarea {
   min-height: 160px;
   flex: 1 1 240px;
   resize: none;
-  border: 1px solid #cfd3d9;
+  border: 1px solid var(--ui-color-border-strong);
   border-radius: var(--radius-sm);
   outline: none;
   padding: 15px;
-  color: #25292f;
-  background: #fcfcfd;
+  color: var(--ui-color-text);
+  background: var(--ui-color-surface-subtle);
   font-size: 14px;
   line-height: 1.65;
   transition:
@@ -159,13 +159,13 @@ textarea {
 }
 
 textarea::placeholder {
-  color: #969ca5;
+  color: var(--ui-color-text-disabled);
   opacity: 1;
 }
 
 textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(239, 75, 67, 0.11);
+  box-shadow: 0 0 0 3px var(--ui-color-focus-ring);
 }
 
 .source-input-shell {
@@ -188,7 +188,7 @@ textarea:focus {
   border-radius: 4px;
   padding: 2px 4px;
   color: var(--soft-muted);
-  background: rgba(252, 252, 253, 0.92);
+  background: var(--ui-color-surface-translucent);
   font-size: 10px;
   line-height: 1.2;
   pointer-events: none;
@@ -199,13 +199,13 @@ textarea:focus {
   flex: 0 0 auto;
   align-items: center;
   margin: 7px 0 0;
-  color: #47705a;
+  color: var(--ui-color-success);
   font-size: 11px;
   line-height: 1.45;
 }
 
 .source-mode-status.warning {
-  color: #8b6320;
+  color: var(--ui-color-warning);
 }
 
 .source-generate-action {
@@ -217,8 +217,8 @@ textarea:focus {
 .spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.45);
-  border-top-color: #fff;
+  border: 2px solid var(--ui-color-border-inverse);
+  border-top-color: var(--ui-color-text-inverse);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -234,10 +234,10 @@ textarea:focus {
   align-items: flex-start;
   gap: 8px;
   margin-top: 10px;
-  border: 1px solid #f3c3bf;
+  border: 1px solid var(--ui-color-danger-border);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
-  color: #9f2d27;
+  color: var(--ui-color-danger);
   background: var(--red-soft);
   font-size: 12px;
   line-height: 1.5;
@@ -254,11 +254,11 @@ textarea:focus {
   align-items: flex-start;
   gap: 8px;
   margin-top: 10px;
-  border: 1px solid #ead9b3;
+  border: 1px solid var(--ui-color-warning-border);
   border-radius: var(--radius-sm);
   padding: 9px 11px;
-  color: #6f5b32;
-  background: #fff9ec;
+  color: var(--ui-color-warning);
+  background: var(--ui-color-warning-subtle);
   font-size: 11px;
   line-height: 1.5;
 }
@@ -313,23 +313,23 @@ textarea:focus {
   min-height: 36px;
   align-items: center;
   gap: 7px;
-  border: 1px solid #cfd3d9;
+  border: 1px solid var(--ui-color-border-strong);
   border-radius: 7px;
   padding: 0 12px;
-  color: #333840;
-  background: #fff;
+  color: var(--ui-color-text);
+  background: var(--ui-color-surface);
   font-size: 12px;
   font-weight: 700;
 }
 
 .copy-button:hover:not(:disabled) {
-  border-color: #aeb4bc;
-  background: #f8f9fa;
+  border-color: var(--ui-color-border-strong);
+  background: var(--ui-color-surface-hover);
 }
 
 .copy-button:disabled {
-  color: #a8adb5;
-  background: #f7f8f9;
+  color: var(--ui-color-text-disabled);
+  background: var(--ui-color-surface-hover);
 }
 
 .copy-button svg {
@@ -340,9 +340,9 @@ textarea:focus {
 .document-scroll {
   min-height: 0;
   overflow: auto;
-  background-color: #fdfcf9;
+  background-color: var(--ui-color-surface-subtle);
   background-image:
-    linear-gradient(rgba(99, 77, 40, 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99, 77, 40, 0.012) 1px, transparent 1px);
+    linear-gradient(var(--ui-color-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ui-color-grid-line) 1px, transparent 1px);
   background-size: 22px 22px;
 }

@@ -58,6 +58,20 @@ async function collectJsx(relativeDirectory) {
   return paths;
 }
 
+async function collectCss(relativeDirectory) {
+  const entries = await readdir(path.join(root, relativeDirectory), { withFileTypes: true });
+  const paths = [];
+  for (const entry of entries) {
+    const relativePath = path.join(relativeDirectory, entry.name);
+    if (entry.isDirectory()) {
+      paths.push(...await collectCss(relativePath));
+    } else if (entry.isFile() && entry.name.endsWith(".css")) {
+      paths.push(relativePath);
+    }
+  }
+  return paths;
+}
+
 if (!files.get("docs/ui-system.md").startsWith("# UI System v1")) {
   failures.push("docs/ui-system.md: 必须以 # UI System v1 开头");
 }
@@ -84,11 +98,22 @@ for (const relativePath of ["src/styles/shell.css", "src/styles/publish-workflow
 
 for (const relativePath of await collectJsx("src")) {
   const source = await read(relativePath);
+  if (/#[\da-f]{3,8}\b|rgba?\(|hsla?\(/iu.test(source)) {
+    failures.push(`${relativePath}: JSX 中的颜色必须使用 UI System 语义 Token`);
+  }
   if (relativePath !== "src/components/ui/icons.js" && /from\s+["']lucide-react["']/u.test(source)) {
     failures.push(`${relativePath}: 应从 src/components/ui/icons.js 引入应用图标`);
   }
   if (/from\s+["']\.\/icons["']/u.test(source)) {
     failures.push(`${relativePath}: 禁止恢复旧的局部图标体系`);
+  }
+}
+
+for (const relativePath of await collectCss("src")) {
+  if (relativePath === "src/styles/foundations.css") continue;
+  const source = await read(relativePath);
+  if (/#[\da-f]{3,8}\b|rgba?\(|hsla?\(/iu.test(source)) {
+    failures.push(`${relativePath}: 业务样式颜色必须使用 foundations.css 语义 Token`);
   }
 }
 
