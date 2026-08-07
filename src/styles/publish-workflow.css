@@ -615,7 +615,7 @@
   flex: 0 0 auto;
   border-radius: 11px;
   cursor: pointer;
-  filter: drop-shadow(0 20px 18px var(--ui-color-shadow-medium));
+  filter: drop-shadow(0.8px 0.8px 0 var(--ui-color-shadow-medium));
 }
 
 .empty-transformers-visual:focus-visible,
@@ -999,6 +999,89 @@
 .empty-minion-visual.is-active .empty-minion-arm-left,
 .empty-minion-visual.is-active .empty-minion-arm-right {
   animation: minion-arm-flap 430ms ease-in-out 2;
+}
+
+.empty-mario-svg :is(path, rect, ellipse, circle),
+.empty-transformers-svg :is(path, rect, ellipse, circle),
+.empty-minion-svg :is(path, rect, ellipse, circle) {
+  fill: var(--ui-color-surface);
+  stroke: var(--ui-color-art-strong);
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.empty-mario-arm path,
+.empty-bumblebee-antenna,
+.empty-minion-hair,
+.empty-minion-goggle-band,
+.empty-minion-strap,
+.empty-minion-arm path {
+  fill: none;
+  stroke: var(--ui-color-art-strong);
+  stroke-width: 3;
+}
+
+.empty-minion-goggle-band {
+  stroke-width: 4;
+}
+
+.empty-mario-pupil,
+.empty-minion-pupil,
+.empty-minion-button,
+.empty-bot-eyes {
+  fill: var(--ui-color-art-strong);
+}
+
+.empty-mario-cap,
+.empty-mario-cap-brim,
+.empty-mario-shirt {
+  stroke: var(--ui-color-art-dark);
+  stroke-width: 1.8;
+}
+
+.empty-mario-overalls,
+.empty-mario-bib,
+.empty-mario-strap,
+.empty-mario-leg {
+  stroke: var(--ui-color-art-mid);
+  stroke-width: 1.8;
+}
+
+.empty-optimus-helmet,
+.empty-optimus-crest,
+.empty-optimus-chest,
+.empty-optimus-shoulder,
+.empty-optimus-leg {
+  stroke: var(--ui-color-art-dark);
+  stroke-width: 1.8;
+}
+
+.empty-bumblebee-helmet,
+.empty-bumblebee-chest,
+.empty-bumblebee-arm > path:first-child,
+.empty-bumblebee-leg,
+.empty-minion-body {
+  stroke: var(--ui-color-art-mid);
+  stroke-width: 1.8;
+}
+
+.empty-optimus-blade {
+  fill: none;
+  stroke: var(--ui-color-art-mid);
+  stroke-width: 2;
+}
+
+.empty-bumblebee-wheel {
+  stroke-width: 2;
+}
+
+.empty-minion-mouth,
+.empty-minion-tongue,
+.empty-minion-teeth {
+  fill: var(--ui-color-surface);
+  stroke: var(--ui-color-art-strong);
 }
 
 .empty-workflow-kicker {
