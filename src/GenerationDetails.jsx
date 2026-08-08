@@ -5,6 +5,8 @@ import {
   X,
   XCircle,
 } from "./components/ui/icons";
+import { Button } from "./components/ui/Button";
+import { IconButton } from "./components/ui/IconButton";
 import { useEffect, useId, useRef, useState } from "react";
 
 const FAILURE_LABELS = {
@@ -54,9 +56,12 @@ export function GenerationDetails({ run, placement = "statusbar" }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const detailsRef = useRef(null);
+  const panelRef = useRef(null);
 
   useEffect(() => {
     if (!open || placement !== "statusbar") return undefined;
+
+    panelRef.current?.focus();
 
     function closeOnOutsidePointer(event) {
       if (!detailsRef.current?.contains(event.target)) {
@@ -77,13 +82,29 @@ export function GenerationDetails({ run, placement = "statusbar" }) {
     : degraded
       ? `自动切换成功 · 共尝试 ${failedCount + 1} 次`
       : "本次生成详情";
+  const tone = run?.failed
+    ? "danger"
+    : degraded
+      ? "warning"
+      : success
+        ? "success"
+        : "neutral";
+
+  function closeAndRestoreFocus() {
+    setOpen(false);
+    requestAnimationFrame(() => {
+      detailsRef.current?.querySelector(".generation-details-trigger")?.focus();
+    });
+  }
 
   const panel = (
     <div
+      ref={placement === "statusbar" ? panelRef : undefined}
       className="generation-details-panel"
       id={panelId}
       role={placement === "statusbar" ? "dialog" : undefined}
       aria-label={placement === "statusbar" ? "本次生成详情" : undefined}
+      tabIndex={placement === "statusbar" ? -1 : undefined}
     >
       <div className="generation-details-heading">
         <div>
@@ -97,14 +118,14 @@ export function GenerationDetails({ run, placement = "statusbar" }) {
           <span>调用记录不显示或保存完整 API Key</span>
         </div>
         {placement === "statusbar" && (
-          <button
-            type="button"
+          <IconButton
             className="generation-details-close"
-            aria-label="关闭生成详情"
-            onClick={() => setOpen(false)}
-          >
-            <X aria-hidden="true" />
-          </button>
+            label="关闭生成详情"
+            icon={<X />}
+            size="sm"
+            variant="ghost"
+            onClick={closeAndRestoreFocus}
+          />
         )}
       </div>
       <ol>
@@ -141,30 +162,33 @@ export function GenerationDetails({ run, placement = "statusbar" }) {
     return (
       <div
         ref={detailsRef}
-        className={`generation-details statusbar-details${open ? " open" : ""}`}
+        className={`generation-details statusbar-details is-${tone}${open ? " open" : ""}`}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
-            setOpen(false);
+            event.preventDefault();
+            closeAndRestoreFocus();
           }
         }}
       >
-        <button
-          type="button"
+        <Button
           className="generation-details-trigger"
+          icon={<ChevronDown />}
+          iconPosition="end"
+          size="sm"
+          variant="ghost"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((current) => !current)}
         >
-          <span>{summary}</span>
-          <ChevronDown aria-hidden="true" />
-        </button>
+          {summary}
+        </Button>
         {open && panel}
       </div>
     );
   }
 
   return (
-    <details className={`generation-details ${placement}`}>
+    <details className={`generation-details ${placement} is-${tone}`}>
       <summary>
         <span>{summary}</span>
         <ChevronDown aria-hidden="true" />

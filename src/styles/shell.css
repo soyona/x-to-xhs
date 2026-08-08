@@ -26,8 +26,8 @@
   align-items: center;
   gap: 10px;
   color: var(--ink);
-  font-size: 18px;
-  font-weight: 750;
+  font-size: var(--ui-font-size-panel);
+  font-weight: var(--ui-font-weight-bold);
   text-decoration: none;
 }
 
@@ -44,8 +44,8 @@
   border: 1px solid var(--border);
   border-radius: 9px;
   background: var(--ui-color-surface-hover);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 13px;
+  font-family: var(--ui-font-mono);
+  font-size: var(--ui-font-size-body);
 }
 
 .local-status {
@@ -53,8 +53,8 @@
   align-items: center;
   gap: 8px;
   color: var(--ui-color-text-secondary);
-  font-size: 13px;
-  font-weight: 650;
+  font-size: var(--ui-font-size-body);
+  font-weight: var(--ui-font-weight-bold);
 }
 
 .topbar-actions {
@@ -115,10 +115,10 @@
   flex: 0 0 auto;
   margin: 0;
   color: var(--accent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-family: var(--ui-font-mono);
+  font-size: var(--ui-font-size-overline);
+  font-weight: var(--ui-font-weight-bold);
+  letter-spacing: var(--ui-letter-spacing-overline);
 }
 
 h1,
@@ -132,8 +132,8 @@ p {
 .source-panel h2,
 .panel-header h2 {
   margin: 0;
-  font-size: 18px;
-  line-height: 1.35;
+  font-size: var(--ui-font-size-panel);
+  line-height: var(--ui-line-height-panel);
 }
 
 .source-panel h1 {
@@ -151,8 +151,8 @@ textarea {
   padding: 15px;
   color: var(--ui-color-text);
   background: var(--ui-color-surface-subtle);
-  font-size: 14px;
-  line-height: 1.65;
+  font-size: var(--ui-font-size-body);
+  line-height: var(--ui-line-height-body);
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease;
@@ -189,8 +189,8 @@ textarea:focus {
   padding: 2px 4px;
   color: var(--soft-muted);
   background: var(--ui-color-surface-translucent);
-  font-size: 10px;
-  line-height: 1.2;
+  font-size: var(--ui-font-size-overline);
+  line-height: var(--ui-line-height-overline);
   pointer-events: none;
 }
 
@@ -200,8 +200,8 @@ textarea:focus {
   align-items: center;
   margin: 7px 0 0;
   color: var(--ui-color-success);
-  font-size: 11px;
-  line-height: 1.45;
+  font-size: var(--ui-font-size-metadata);
+  line-height: var(--ui-line-height-metadata);
 }
 
 .source-mode-status.warning {
@@ -239,8 +239,8 @@ textarea:focus {
   padding: 10px 12px;
   color: var(--ui-color-danger);
   background: var(--red-soft);
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--ui-font-size-supporting);
+  line-height: var(--ui-line-height-supporting);
 }
 
 .error-message svg {
@@ -259,8 +259,8 @@ textarea:focus {
   padding: 9px 11px;
   color: var(--ui-color-warning);
   background: var(--ui-color-warning-subtle);
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: var(--ui-font-size-metadata);
+  line-height: var(--ui-line-height-supporting);
 }
 
 .history-notice svg {
@@ -303,8 +303,8 @@ textarea:focus {
 }
 
 .prompt-profile-summary {
-  font-size: 11px;
-  font-weight: 750;
+  font-size: var(--ui-font-size-metadata);
+  font-weight: var(--ui-font-weight-bold);
   color: var(--green);
 }
 
@@ -318,8 +318,8 @@ textarea:focus {
   padding: 0 12px;
   color: var(--ui-color-text);
   background: var(--ui-color-surface);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--ui-font-size-control);
+  font-weight: var(--ui-font-weight-bold);
 }
 
 .copy-button:hover:not(:disabled) {

@@ -43,6 +43,56 @@
 - 所有交互控件必须提供 hover、active、focus-visible、disabled 和 loading 状态。
 - 成功或失败不能只依靠颜色表达；复制与下载成功应同时显示图标和文字。
 
+## 字体系统：Compact Product Typography
+
+字体服务于信息层级、阅读效率和中英文混排，不作为品牌装饰。整体方向参考
+Linear 的紧凑产品界面和 X 的直接高对比排版，但本项目的字号、行高与中文回退
+是针对桌面生产力工具独立制定的，不照搬两者面向英文界面或品牌传播的数值。
+
+### 字体族
+
+- 界面无衬线字体统一使用：`Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
+  "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif`。
+- `Inter` 不可用时必须自然回退到系统字体；不得为了保持西文字形而阻断中文字体回退。
+- 代码、结构化 ID、快捷键和需要等宽对齐的技术内容使用：
+  `ui-monospace, SFMono-Regular, Menlo, monospace`。普通编号、时间和计数仍使用界面字体。
+- 不引入衬线体、手写体或第二套展示字体。新增网络字体或字体文件必须先获得授权，
+  并说明加载、隐私、性能和中文字形回退影响。
+
+### 语义层级
+
+以下角色由 `src/styles/foundations.css` 中的 `--ui-font-*`、`--ui-line-height-*`
+和 `--ui-letter-spacing-*` Token 实现；业务样式只引用 Token，不重复写入裸数值。
+
+| 角色 | 字号 / 行高 | 字重 | 用途 |
+|---|---|---|---|
+| Page title | `20px / 1.3` | `700` | 弹窗或独立页面的最高级标题 |
+| Panel title | `18px / 1.35` | `700` | `01`、`02` 工作区标题和主要结果标题 |
+| Section title | `14px / 1.4` | `700` | 面板内分区标题、重要字段标题 |
+| Body | `14px / 1.65` | `400` | 长文内容、输入正文和主要说明 |
+| Control | `12px / 1` | `700` | 常规按钮；Primary 可使用 `13px` 或 `14px` |
+| Supporting | `12px / 1.5` | `400` 或 `500` | 次级说明、列表摘要和表单帮助文字 |
+| Metadata | `11px / 1.45` | `500` | 时间、计数、状态补充和辅助标签 |
+| Overline | `10px / 1.2` | `700` | 编号、极短分类标签；不得用于句子或正文 |
+
+- 字重只使用 `400`、`500`、`700`。不得新增 `600`、`650`、`750`、`800` 等相邻字重
+  制造细碎层级；层级优先由字号、颜色和间距共同表达。
+- 正文和输入内容不得小于 `14px`；可交互控件文字不得小于 `12px`；`10px`、`11px`
+  仅限短辅助信息。
+- 默认字间距使用 `normal`。Overline 中的拉丁大写字母可使用不超过 `0.08em` 的字距；
+  中文、数字、正文和按钮不得使用宽字距。
+- 中文与英文共享同一语义层级；不得仅为英文使用全大写制造层级。中文标签依靠字重、
+  颜色和间距表达，不模拟英文 uppercase 样式。
+
+### 排版与可访问性
+
+- 标题默认单行；空间不足时优先省略非关键信息。正文、错误、帮助文字和操作结果不得截断。
+- 长文正文使用自然换行，不使用两端对齐；段落宽度由现有工作区控制，不额外创建窄栏版式。
+- 系统字体缩放或浏览器缩放时不得用固定高度裁切文字；操作组空间不足时整体换行。
+- 禁用状态仍须保持文字可读；小字号不得叠加 `text-disabled` 降低对比度。
+- 新增或修改界面时必须从上表选择语义角色，不得创建只服务单个元素的字号、字重或行高。
+  既有样式在对应组件被修改时按此表收敛，不为迁移字体而混入无关功能改动。
+
 ## 组件使用规则
 
 - 业务代码必须优先复用 `src/components/ui/**`。
@@ -126,6 +176,23 @@ Primary 使用近黑底白字；Secondary 使用白底灰边；Ghost 默认透�
 - 共有操作顺序在所有断点保持不变。
 - 小屏下文字输入和内容预览占满可用宽度，操作组左对齐。
 - 控件不得造成面板横向滚动。
+
+## 参考依据
+
+本规范参考产品原则，不复制 Linear 或 X 的商标资产、专有组件或品牌版式；本项目的
+Token、尺寸和中文排版规则仍以本文件为唯一权威。
+
+- [Linear: How we redesigned the Linear UI](https://linear.app/now/how-we-redesigned-the-linear-ui)：
+  参考其降低视觉噪声、提升层级与信息密度的产品界面原则；Linear 明确以
+  Inter Display 增强标题表达、以 Inter 承担其余文字。本项目统一使用 Inter 与系统
+  中文字体回退，不额外引入 Inter Display。
+- [Linear: Account preferences](https://linear.app/docs/account-preferences)：参考其允许调整
+  界面字号的可访问性方向；本项目必须保证浏览器缩放时文字不被固定高度裁切。
+- [X: Brand Quick Guide](https://about.x.com/content/dam/about-twitter/x/brand-toolkit/x-brand-guidelines.pdf)：
+  参考其 Helvetica Neue、标题 Bold / 正文 Normal 的清晰对比，以及黑白为主的直接表达。
+  该指南面向外部品牌传播，其 pt 字号不适用于本应用界面，故不直接采用。
+- [X: Brand toolkit](https://about.x.com/en/who-we-are/brand-toolkit)：作为 X 官方品牌资料入口，
+  用于确认参考来源和适用边界。
 
 ## 变更治理
 

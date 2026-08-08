@@ -92,7 +92,7 @@
   }
 
   .empty-workflow-heading h2 {
-    font-size: 22px;
+    font-size: var(--ui-font-size-page);
   }
 
   .empty-transformers-visual {
@@ -209,16 +209,16 @@
   }
 
   .publish-rich-preview h1 {
-    font-size: 21px;
+    font-size: var(--ui-font-size-page);
   }
 
   .publish-rich-preview h2 {
-    font-size: 18px;
+    font-size: var(--ui-font-size-panel);
   }
 
   .publish-rich-preview p,
   .publish-rich-preview li {
-    font-size: 15px;
+    font-size: var(--ui-font-size-body);
   }
 
   .statusbar {
@@ -299,7 +299,7 @@
   }
 
   .history-detail-heading h3 {
-    font-size: 15px;
+    font-size: var(--ui-font-size-panel);
   }
 
   .history-detail-heading label {
@@ -312,7 +312,7 @@
 
   .history-draft {
     padding: 12px;
-    font-size: 10px;
+    font-size: var(--ui-font-size-supporting);
   }
 
   .history-actions {

@@ -6,6 +6,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const protectedSources = [
   "src/App.jsx",
+  "src/GenerationDetails.jsx",
   "src/PublishWorkflow.jsx",
 ];
 
@@ -16,6 +17,7 @@ const requiredFiles = [
   "src/components/ui/ActionGroup.jsx",
   "src/components/ui/SegmentedControl.jsx",
   "src/components/ui/icons.js",
+  "src/styles/foundations.css",
   "src/styles/ui-system.css",
 ];
 
@@ -88,6 +90,22 @@ if (!files.get("package.json").includes('"check:ui": "node scripts/check-ui-cont
   failures.push("package.json: 必须保留 check:ui 契约检查");
 }
 
+for (const token of [
+  "--ui-font-sans",
+  "--ui-font-mono",
+  "--ui-font-size-body",
+  "--ui-font-size-control",
+  "--ui-font-weight-regular",
+  "--ui-font-weight-medium",
+  "--ui-font-weight-bold",
+  "--ui-line-height-body",
+  "--ui-letter-spacing-overline",
+]) {
+  if (!files.get("src/styles/foundations.css").includes(token)) {
+    failures.push(`src/styles/foundations.css: 必须保留字体 Token ${token}`);
+  }
+}
+
 const forbiddenActionClass = /(?:material-action|generate-button|section-copy-button|topbar-icon-button|material-cancel-action|source-mode-options)/u;
 
 for (const relativePath of ["src/styles/shell.css", "src/styles/publish-workflow.css", "src/styles/responsive.css"]) {
@@ -114,6 +132,22 @@ for (const relativePath of await collectCss("src")) {
   const source = await read(relativePath);
   if (/#[\da-f]{3,8}\b|rgba?\(|hsla?\(/iu.test(source)) {
     failures.push(`${relativePath}: 业务样式颜色必须使用 foundations.css 语义 Token`);
+  }
+
+  for (const match of source.matchAll(/(font-(?:family|size|weight)|line-height|letter-spacing)\s*:\s*([^;]+);/gu)) {
+    const [, property, rawValue] = match;
+    const value = rawValue.trim();
+    const usesTypographyToken =
+      (property === "font-family" && (value === "inherit" || /^var\(--ui-font-(?:sans|mono)\)$/u.test(value))) ||
+      (property === "font-size" && (value === "0" || /^var\(--ui-font-size-[\w-]+\)$/u.test(value))) ||
+      (property === "font-weight" && /^var\(--ui-font-weight-[\w-]+\)$/u.test(value)) ||
+      (property === "line-height" && /^var\(--ui-line-height-[\w-]+\)$/u.test(value)) ||
+      (property === "letter-spacing" && (value === "normal" || /^var\(--ui-letter-spacing-[\w-]+\)$/u.test(value)));
+
+    if (!usesTypographyToken) {
+      failures.push(`${relativePath}: ${property} 必须使用 UI System 字体 Token`);
+      break;
+    }
   }
 }
 

@@ -9,9 +9,9 @@
   padding: 0 var(--ui-space-3);
   color: var(--ui-color-text-secondary);
   background: transparent;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
+  font-size: var(--ui-font-size-control);
+  font-weight: var(--ui-font-weight-bold);
+  line-height: var(--ui-line-height-control);
   white-space: nowrap;
   transition:
     border-color 150ms ease,
@@ -23,7 +23,7 @@
 .ui-button.is-sm {
   min-height: var(--ui-control-sm);
   padding-inline: 8px;
-  font-size: 11px;
+  font-size: var(--ui-font-size-metadata);
 }
 
 .ui-button.is-md {
@@ -33,7 +33,7 @@
 .ui-button.is-lg {
   min-height: var(--ui-control-lg);
   padding-inline: var(--ui-space-4);
-  font-size: 14px;
+  font-size: var(--ui-font-size-body);
 }
 
 .ui-button.is-primary {
@@ -160,8 +160,8 @@
   padding: 0 var(--ui-space-2);
   color: var(--ui-color-text-secondary);
   background: transparent;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--ui-font-size-control);
+  font-weight: var(--ui-font-weight-bold);
   white-space: nowrap;
 }
 
